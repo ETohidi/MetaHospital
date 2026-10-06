@@ -1,0 +1,627 @@
+/* Map levels (Earth, Germany, Berlin): the base maps, pins and labels, and the side-panel
+   cards. SVG sizes below are in viewBox units; container queries enlarge the labels when
+   the map is drawn small, and hide the secondary ones when there is no room. */
+
+/* -- map card ---------------------------------------------------------------- */
+.map-card {
+  container-type: inline-size;
+}
+.map-card-germany,
+.map-card-berlin {
+  background: var(--map-water);
+}
+.map-svg {
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+  background: var(--surface);
+}
+.map-svg-germany {
+  max-height: min(80vh, 880px);
+  background: var(--map-water);
+}
+.map-svg-berlin {
+  background: var(--map-water);
+}
+.map-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.75rem;
+}
+.map-missing {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  text-align: center;
+  border-style: dashed;
+}
+.map-missing p {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* -- base layers ---------------------------------------------------------------- */
+.map-sphere,
+.map-water {
+  fill: var(--map-water);
+}
+.map-sphere {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.map-graticule {
+  stroke: color-mix(in srgb, var(--ink-3) 22%, transparent);
+  stroke-width: 0.5;
+}
+.map-land {
+  fill: var(--map-land);
+}
+.map-borders {
+  stroke: var(--map-line);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+.map-state,
+.map-district {
+  fill: var(--map-land);
+  stroke: var(--map-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.map-district {
+  stroke-width: 1.5;
+}
+.map-district.has-hospital {
+  fill: color-mix(in srgb, var(--map-active) 45%, var(--map-land));
+}
+.map-state:hover,
+.map-district:hover {
+  fill: color-mix(in srgb, var(--map-land) 80%, var(--ink-3));
+}
+.map-district.has-hospital:hover {
+  fill: color-mix(in srgb, var(--map-active) 65%, var(--map-land));
+}
+
+/* -- labels (halo keeps them readable over borders and land) ------------------------ */
+.map-label,
+.map-link-label,
+.map-city-label,
+.map-district-label,
+.map-scale-label {
+  font-family: var(--font-body);
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
+/* labels inside a clickable group are part of its target; the rest let hovers through */
+.map-link-label,
+.map-city-label,
+.map-district-label,
+.map-scale-label {
+  pointer-events: none;
+}
+.map-label {
+  fill: var(--ink);
+  stroke: var(--surface);
+  stroke-width: 4px;
+}
+.map-label-name,
+.map-pin-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.01em;
+}
+.map-label-detail,
+.map-pin-detail {
+  font-size: 13px;
+  font-weight: 500;
+  fill: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.map-label-berlin .map-label-name {
+  font-size: 19px;
+}
+.map-pin-name {
+  font-size: 15px;
+}
+.map-city-label {
+  font-size: 13px;
+  fill: var(--ink-3);
+  stroke: var(--map-land);
+  stroke-width: 3px;
+}
+.map-district-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  fill: var(--ink-3);
+  stroke: var(--map-land);
+  stroke-width: 3px;
+}
+.map-link-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  fill: var(--ink-2);
+  stroke: var(--surface);
+  stroke-width: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.map-link-divert {
+  fill: var(--accent);
+}
+.map-scale-bar {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+}
+.map-scale-label {
+  font-size: 12px;
+  fill: var(--ink-2);
+  stroke: var(--map-water);
+  stroke-width: 3px;
+}
+
+/* -- places and markers ------------------------------------------------------------------ */
+.map-city-dot {
+  fill: var(--ink-3);
+  stroke: var(--map-land);
+  stroke-width: 1.5;
+}
+.map-de,
+.map-be {
+  fill: var(--map-active);
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  transition: fill 150ms ease;
+}
+.map-be {
+  stroke-width: 1.8;
+}
+.map-marker {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+.map-ring {
+  fill: none;
+  stroke-width: 3.5;
+  stroke: var(--ok);
+}
+.map-ring.is-warn {
+  stroke: var(--warn);
+}
+.map-ring.is-crit {
+  stroke: var(--crit);
+}
+.map-pulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: map-pulse 2400ms ease-out infinite;
+}
+.map-pulse.is-crit {
+  stroke: var(--crit);
+  stroke-width: 3;
+}
+@keyframes map-pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* -- interactive targets (Germany, Berlin, hospital pins) --------------------------------- */
+.map-hit,
+.map-pin {
+  cursor: pointer;
+  outline: none;
+}
+.map-hit-area {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 0;
+}
+.map-target-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.7;
+}
+.map-focus {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 4 3;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.map-hit:hover .map-focus,
+.map-pin:hover .map-focus {
+  opacity: 0.8;
+}
+.map-hit:focus-visible .map-focus,
+.map-pin:focus-visible .map-focus {
+  opacity: 1;
+  stroke-dasharray: none;
+  stroke-width: 3;
+}
+.map-hit:hover .map-de,
+.map-hit:focus-visible .map-de,
+.map-hit:hover .map-be,
+.map-hit:focus-visible .map-be {
+  fill: color-mix(in srgb, var(--map-active) 65%, var(--accent));
+}
+.map-hit:focus-visible .map-label-name,
+.map-pin:focus-visible .map-pin-name {
+  text-decoration: underline;
+}
+
+/* hospital pins */
+.map-pin-dot {
+  fill: var(--ok);
+  stroke: var(--surface);
+  stroke-width: 2.5;
+}
+.map-pin-dot.is-warn {
+  fill: var(--warn);
+}
+.map-pin-dot.is-crit {
+  fill: var(--crit);
+}
+.map-pin-own {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.map-pin:hover .map-pin-dot {
+  stroke: var(--ink);
+}
+
+/* connectors to the neighbours */
+.map-link {
+  stroke: var(--ink-2);
+  stroke-width: 1.8;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+}
+.map-link-group.is-divert .map-link {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-dasharray: 6 3;
+  animation: map-flow 1200ms linear infinite;
+}
+@keyframes map-flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+/* linked highlight: hovering a hospital card marks its pin, and the other way round */
+.map-layout:has(.map-hcard-0:is(:hover, :focus-within)) .map-pin-0 .map-focus,
+.map-layout:has(.map-hcard-1:is(:hover, :focus-within)) .map-pin-1 .map-focus,
+.map-layout:has(.map-hcard-2:is(:hover, :focus-within)) .map-pin-2 .map-focus,
+.map-layout:has(.map-hcard-3:is(:hover, :focus-within)) .map-pin-3 .map-focus,
+.map-layout:has(.map-hcard-4:is(:hover, :focus-within)) .map-pin-4 .map-focus,
+.map-layout:has(.map-hcard-5:is(:hover, :focus-within)) .map-pin-5 .map-focus {
+  opacity: 1;
+}
+.map-layout:has(.map-pin-0:is(:hover, :focus-visible)) .map-hcard-0,
+.map-layout:has(.map-pin-1:is(:hover, :focus-visible)) .map-hcard-1,
+.map-layout:has(.map-pin-2:is(:hover, :focus-visible)) .map-hcard-2,
+.map-layout:has(.map-pin-3:is(:hover, :focus-visible)) .map-hcard-3,
+.map-layout:has(.map-pin-4:is(:hover, :focus-visible)) .map-hcard-4,
+.map-layout:has(.map-pin-5:is(:hover, :focus-visible)) .map-hcard-5 {
+  border-color: var(--accent);
+}
+
+/* legend swatches */
+.map-sw-active {
+  background: var(--map-active);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.map-sw-ring,
+.map-sw-own {
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2.5px var(--accent);
+  background: transparent;
+}
+.map-sw-city {
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--ink-3);
+}
+.map-sw-tone {
+  border-radius: 50%;
+  background: var(--ok);
+}
+.map-sw-tone.is-warn {
+  background: var(--warn);
+}
+.map-sw-tone.is-crit {
+  background: var(--crit);
+}
+.map-sw-ring-tone {
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 2.5px var(--ok);
+}
+.map-sw-ring-tone.is-warn {
+  box-shadow: inset 0 0 0 2.5px var(--warn);
+}
+.map-sw-ring-tone.is-crit {
+  box-shadow: inset 0 0 0 2.5px var(--crit);
+}
+.map-sw-link {
+  width: 18px;
+  height: 0;
+  border-radius: 0;
+  border-top: 2px dashed var(--ink-2);
+  background: transparent;
+}
+
+/* -- narrow maps: bigger labels, fewer of them ------------------------------------------- */
+@container (max-width: 760px) {
+  .map-district-label {
+    display: none;
+  }
+  .map-label-name,
+  .map-pin-name {
+    font-size: 21px;
+  }
+  .map-label-berlin .map-label-name {
+    font-size: 22px;
+  }
+  .map-label-detail,
+  .map-pin-detail {
+    font-size: 17px;
+  }
+  .map-link-label {
+    font-size: 16px;
+  }
+  .map-scale-label {
+    font-size: 16px;
+  }
+}
+@container (max-width: 520px) {
+  .map-pin-detail,
+  .map-link-label,
+  .map-svg-earth .map-label-detail {
+    display: none;
+  }
+  .map-label-name,
+  .map-pin-name {
+    font-size: 30px;
+  }
+  .map-label-berlin .map-label-name {
+    font-size: 28px;
+  }
+  .map-svg-germany .map-label-detail {
+    font-size: 20px;
+  }
+  .map-city-label {
+    font-size: 20px;
+  }
+  .map-scale-label {
+    font-size: 22px;
+  }
+  .map-foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  /* bigger touch targets once the map is drawn at under half size */
+  .map-pin .map-hit-area,
+  .map-hit .map-hit-area {
+    stroke-width: 24px;
+  }
+}
+
+/* -- panels -------------------------------------------------------------------------------- */
+.map-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.map-summary h3 {
+  margin-top: 2px;
+}
+/* long chips (the emergency one) wrap inside the side cards instead of running past them */
+.map-summary .chip,
+.map-hcard .chip {
+  white-space: normal;
+  max-width: 100%;
+}
+.map-stats,
+.map-free {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.map-levels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.map-levels a {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 1px 10px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  text-decoration: none;
+}
+.map-levels a:hover {
+  background: var(--surface-2);
+}
+.map-levels a[aria-current="page"] {
+  background: var(--accent-soft);
+}
+.map-lvl-num {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+.map-levels a[aria-current="page"] .map-lvl-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.map-lvl-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+}
+.map-lvl-scale {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.map-lvl-shows {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+.map-cities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+  font-size: var(--step--1);
+}
+.map-cities li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+}
+.map-city-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+.map-note {
+  margin-top: 10px;
+  font-size: var(--step--1);
+}
+
+/* hospital cards (Berlin) */
+.map-hcard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 120ms ease;
+}
+.map-hcard.is-own {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.map-hcard-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+.map-hcard-title .faint {
+  font-size: var(--step--1);
+}
+.map-dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.map-dot.is-warn {
+  background: var(--warn);
+}
+.map-dot.is-crit {
+  background: var(--crit);
+}
+.map-units {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: var(--step--1);
+}
+.map-units .meter {
+  height: 5px;
+}
+.map-units-head {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.map-unit-name {
+  font-weight: 600;
+}
+.map-unit-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.map-report {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--step--1);
+}
+.map-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 10px;
+}
+.map-coordinator p + p {
+  margin-top: 8px;
+}
+.map-coordinator p {
+  font-size: var(--step--1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pulse {
+    animation: none;
+    opacity: 0.55;
+    transform: scale(1.6);
+  }
+  .map-link-group.is-divert .map-link {
+    animation: none;
+  }
+}

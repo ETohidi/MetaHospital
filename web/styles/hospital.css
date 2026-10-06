@@ -1,0 +1,667 @@
+/* Level 4: a hospital. Own hospital = bed board + plan + conversation; neighbour =
+   free-bed tiles, a free-beds chart and its latest reports. Every class starts hosp-. */
+
+/* Unit series colours for the neighbour chart: blue, orange, violet (checked for
+   colour-blind separation). Dark mode steps them down so they don't glare. */
+:root {
+  --hosp-ed: var(--accent);
+  --hosp-icu: var(--tri-4);
+  --hosp-ward: color-mix(in oklch, var(--tri-1), var(--tri-5));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hosp-ed: color-mix(in oklab, var(--accent) 88%, var(--bg));
+    --hosp-icu: color-mix(in oklab, var(--tri-4) 85%, var(--bg));
+    --hosp-ward: color-mix(in oklab, color-mix(in oklch, var(--tri-1), var(--tri-5)) 92%, var(--bg));
+  }
+}
+:root[data-theme="dark"] {
+  --hosp-ed: color-mix(in oklab, var(--accent) 88%, var(--bg));
+  --hosp-icu: color-mix(in oklab, var(--tri-4) 85%, var(--bg));
+  --hosp-ward: color-mix(in oklab, color-mix(in oklch, var(--tri-1), var(--tri-5)) 92%, var(--bg));
+}
+
+.hosp-caption {
+  font-size: var(--step--1);
+}
+.hosp-chips .chip {
+  white-space: normal;
+}
+.hosp-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 4px;
+  color: var(--crit);
+}
+
+/* -- bed board ------------------------------------------------------------- */
+.hosp-board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.hosp-board-head p {
+  font-size: var(--step--1);
+}
+.hosp-legend {
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.hosp-legend .swatch {
+  border: 1px solid transparent;
+}
+
+/* acuity fills, shared by bed cells and legend swatches */
+.hosp-a1 {
+  background: var(--tri-1);
+}
+.hosp-a2 {
+  background: var(--tri-2);
+}
+.hosp-a3 {
+  background: var(--tri-3);
+}
+.hosp-a4 {
+  background: var(--tri-4);
+}
+.hosp-a5 {
+  background: var(--tri-5);
+}
+.hosp-legend .swatch.hosp-sw-free {
+  background: var(--surface);
+  border: 1.5px solid color-mix(in srgb, var(--ink-3) 70%, var(--line));
+}
+.hosp-legend .swatch.hosp-sw-overflow {
+  border-style: dashed;
+}
+.hosp-sw-closed,
+.hosp-bed.is-closed {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-2) 0 3px,
+    color-mix(in srgb, var(--ink-3) 35%, var(--surface-2)) 3px 5px
+  );
+}
+.hosp-sw-surge {
+  background: radial-gradient(circle, var(--surface) 0 2.5px, var(--tri-3) 3px);
+}
+.hosp-legend .swatch.hosp-sw-hallway {
+  background: var(--tri-2);
+  outline: 2px solid var(--crit);
+  outline-offset: 1px;
+  margin: 0 2px;
+}
+
+.hosp-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hosp-unit.is-crit {
+  border-color: color-mix(in srgb, var(--crit) 55%, var(--line));
+}
+.hosp-unit-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.hosp-unit-head h3 {
+  font-size: var(--step-2);
+}
+.hosp-unit-head h3 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.hosp-unit-head h3 a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.hosp-unit-long {
+  font-family: var(--font-body);
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.hosp-unit-counts {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.hosp-unit-counts b {
+  color: var(--ink);
+}
+.hosp-unit-open {
+  flex: none;
+}
+.hosp-unit-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+.hosp-remembers {
+  color: var(--ink);
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm);
+  padding: 0 6px;
+}
+
+.hosp-beds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 22px);
+  gap: 4px;
+}
+.hosp-bed {
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1.5px solid transparent;
+}
+/* occupied beds are buttons: reset them so they look like the other cells */
+button.hosp-bed {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+.hosp-bed.is-filled:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hosp-bed.is-free {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--ink-3) 70%, var(--line));
+}
+.hosp-bed.is-overflow {
+  border-style: dashed;
+}
+.hosp-bed.is-filled {
+  cursor: pointer;
+}
+.hosp-bed.is-filled:hover {
+  outline: 2px solid var(--ink-2);
+  outline-offset: 1px;
+}
+.hosp-bed.is-selected,
+.hosp-bed.is-selected:hover {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+/* emergency arrival: a small surface-coloured dot in the middle of the fill */
+.hosp-bed.is-surge::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+.hosp-hallway {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.hosp-hallway-count {
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--crit);
+}
+.hosp-beds-hallway {
+  flex: 1 1 200px;
+  gap: 8px;
+  padding: 3px;
+}
+.hosp-bed.is-hallway {
+  outline: 2px solid var(--crit);
+  outline-offset: 1px;
+}
+.hosp-bed.is-hallway.is-selected {
+  outline-color: var(--ink);
+}
+.hosp-bed.is-arrival {
+  animation: hosp-arrive 1.6s ease-out both;
+}
+@keyframes hosp-arrive {
+  0% {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+.hosp-detail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--step--1);
+}
+.hosp-detail > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+/* -- plan card -------------------------------------------------------------- */
+.hosp-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.hosp-plan h4,
+.hosp-subhead {
+  font-size: 0.8125rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  margin: 0 0 4px;
+}
+.hosp-delta-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hosp-delta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.hosp-delta > div {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}
+.hosp-delta dt {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.hosp-delta dd {
+  margin: 0;
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+/* proposed actions: one compact two-line item per action, grouped by author */
+.hosp-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hosp-plan .hosp-pa-head {
+  margin: 0 0 4px;
+}
+.hosp-pa-count {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.hosp-pa-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.hosp-pa {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  font-size: var(--step--1);
+  min-width: 0;
+}
+.hosp-pa + .hosp-pa {
+  border-top: 1px solid var(--line);
+}
+.hosp-pa.is-unit {
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+.hosp-pa-top,
+.hosp-pa-why {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  min-width: 0;
+}
+.hosp-pa-who {
+  font-weight: 600;
+  color: var(--ink);
+}
+.hosp-pa-cond {
+  color: var(--ink-2);
+}
+.hosp-pa-sep {
+  color: var(--ink-3);
+}
+.hosp-pa-move {
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.hosp-pa-why {
+  color: var(--ink-2);
+}
+.hosp-pa-reason {
+  flex: 1 1 100%;
+  overflow-wrap: anywhere;
+}
+.hosp-pa-by {
+  color: var(--ink-3);
+}
+.hosp-conf {
+  font-size: var(--step--1);
+}
+.hosp-summary {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+.hosp-summary .actor {
+  font-weight: 600;
+  color: var(--ink);
+}
+.hosp-blocked ul,
+.hosp-nearby ul,
+.hosp-history,
+.hosp-reports,
+.hosp-bubbles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hosp-blocked li {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--crit-soft);
+  border-left: 3px solid var(--crit);
+  font-size: var(--step--1);
+}
+.hosp-blocked .hosp-icon {
+  margin-top: 2px;
+}
+.hosp-rule {
+  color: var(--ink-2);
+}
+.hosp-nearby li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px 10px;
+  font-size: var(--step--1);
+}
+.hosp-decide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.hosp-reject {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 8px;
+  align-items: center;
+}
+.hosp-reject .hosp-label {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.hosp-reject .input {
+  grid-column: 1;
+}
+.hosp-reject [hidden] {
+  display: none;
+}
+.hosp-reject .btn-danger {
+  grid-column: 2;
+  grid-row: 2;
+}
+.hosp-history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: var(--step--1);
+}
+.hosp-history-reason {
+  flex-basis: 100%;
+  color: var(--ink-2);
+}
+
+/* -- team conversation --------------------------------------------------------- */
+.hosp-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  margin-top: 8px;
+  padding-right: 4px;
+  overscroll-behavior: contain;
+}
+.hosp-log li {
+  padding-inline: 6px;
+  border-radius: 4px;
+}
+.hosp-log li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hosp-log .actor {
+  margin-right: 4px;
+}
+.hosp-log-warn {
+  box-shadow: inset 3px 0 0 var(--warn);
+  background: color-mix(in srgb, var(--warn-soft) 60%, transparent);
+}
+.hosp-log-block {
+  box-shadow: inset 3px 0 0 var(--crit);
+  background: var(--crit-soft);
+}
+.hosp-log-approved {
+  box-shadow: inset 3px 0 0 var(--ok);
+  background: var(--ok-soft);
+}
+.hosp-log-rejected {
+  box-shadow: inset 3px 0 0 var(--crit);
+  background: var(--crit-soft);
+}
+
+/* -- what families see ----------------------------------------------------------- */
+.hosp-bubbles {
+  margin-top: 8px;
+}
+.hosp-bubbles li {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--accent-soft);
+  font-size: var(--step--1);
+}
+.hosp-bubbles time {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+}
+
+/* -- neighbour hospital ------------------------------------------------------------ */
+.hosp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hosp-tile .stat-value {
+  font-size: var(--step-3);
+  font-variant-numeric: normal;
+}
+.hosp-tile-counts {
+  font-size: var(--step--1);
+  color: var(--ink-2);
+}
+.hosp-chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hosp-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px 16px;
+}
+.hosp-chart-legend b {
+  color: var(--ink);
+}
+.hosp-key {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--hosp-ed);
+  border-radius: 1px;
+}
+.hosp-key.hosp-s-ICU {
+  border-top-color: var(--hosp-icu);
+}
+.hosp-key.hosp-s-Ward {
+  border-top-color: var(--hosp-ward);
+}
+.hosp-chart {
+  min-width: 0;
+}
+.hosp-chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.hosp-chart text {
+  fill: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.hosp-grid line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.hosp-grid line.is-zero {
+  stroke: var(--ink-3);
+}
+.hosp-col rect {
+  fill: transparent;
+}
+.hosp-col line {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  opacity: 0;
+}
+.hosp-col:hover line {
+  opacity: 1;
+}
+.hosp-series {
+  pointer-events: none;
+}
+.hosp-series polyline {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.hosp-series circle {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.hosp-series.hosp-s-ED polyline {
+  stroke: var(--hosp-ed);
+}
+.hosp-series.hosp-s-ED circle {
+  fill: var(--hosp-ed);
+}
+.hosp-series.hosp-s-ICU polyline {
+  stroke: var(--hosp-icu);
+}
+.hosp-series.hosp-s-ICU circle {
+  fill: var(--hosp-icu);
+}
+.hosp-series.hosp-s-Ward polyline {
+  stroke: var(--hosp-ward);
+}
+.hosp-series.hosp-s-Ward circle {
+  fill: var(--hosp-ward);
+}
+.hosp-table-toggle {
+  align-self: flex-start;
+}
+.hosp-history-table {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.hosp-history-table td.num,
+.hosp-history-table th.num {
+  text-align: right;
+}
+.hosp-reports {
+  margin-top: 8px;
+}
+.hosp-reports li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--step--1);
+}
+.hosp-reports li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.hosp-report-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.hosp-latest {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .hosp-unit-head h3 {
+    font-size: var(--step-1);
+  }
+  .hosp-unit-long {
+    display: block;
+  }
+}

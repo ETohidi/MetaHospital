@@ -1,0 +1,12 @@
+{
+  "name": "metahospital-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MetaHospital MVP: a multi-level hospital digital twin that runs entirely in the browser",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "serve": "node tools/serve.mjs 8080",
+    "artifact": "node tools/make-artifact.mjs"
+  }
+}

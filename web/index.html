@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MetaHospital</title>
+    <meta name="description" content="A multi-level digital twin of a Berlin hospital network, from the whole planet down to a single bed." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Crect x='1' y='1' width='24' height='24' rx='5' fill='none' stroke='%230b57a4' stroke-width='2'/%3E%3Crect x='6' y='6' width='14' height='14' rx='3' fill='none' stroke='%230b57a4' stroke-width='2' opacity='.7'/%3E%3Crect x='10.5' y='10.5' width='5' height='5' rx='1.2' fill='%230b57a4'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap"
+    />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/maps.css" />
+    <link rel="stylesheet" href="styles/hospital.css" />
+    <link rel="stylesheet" href="styles/unit.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#earth" aria-label="MetaHospital, back to Earth">
+          <svg viewBox="0 0 26 26" aria-hidden="true">
+            <rect x="1" y="1" width="24" height="24" rx="5" fill="none" stroke="var(--accent)" stroke-width="2" />
+            <rect x="6" y="6" width="14" height="14" rx="3" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.7" />
+            <rect x="10.5" y="10.5" width="5" height="5" rx="1.2" fill="var(--accent)" />
+          </svg>
+          MetaHospital
+        </a>
+        <nav aria-label="Zoom level" style="display: contents">
+          <ol class="ladder" id="ladder"></ol>
+        </nav>
+        <div class="simbar" id="simbar" role="toolbar" aria-label="Simulation controls"></div>
+      </div>
+      <div class="statusline" id="statusline"></div>
+    </header>
+
+    <main class="page" id="view" tabindex="-1"></main>
+
+    <footer class="footer">
+      <p>
+        MetaHospital MVP. Every patient, bed and hospital here is simulated; hospital names are fictional. Map data:
+        Natural Earth (public domain), German states from deutschlandGeoJSON (Unlicense), Berlin districts from Berliner
+        Morgenpost Berlin-Geodaten (CC BY, Amt für Statistik Berlin-Brandenburg).
+      </p>
+    </footer>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+    <div class="sr-only" id="surge-live" role="alert"></div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

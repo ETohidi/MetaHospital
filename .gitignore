@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+.env
+~$*
+# Local-only: the pitch deck and editor/preview config
+docs/
+.claude/
