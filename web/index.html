@@ -4,50 +4,53 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>MetaHospital</title>
-    <meta name="description" content="A multi-level digital twin of a Berlin hospital network, from the whole planet down to a single bed." />
+    <meta name="description" content="Hospital capacity at every level, from the world to a single unit: real open data at the top, a simulated demo twin below." />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Crect x='1' y='1' width='24' height='24' rx='5' fill='none' stroke='%230b57a4' stroke-width='2'/%3E%3Crect x='6' y='6' width='14' height='14' rx='3' fill='none' stroke='%230b57a4' stroke-width='2' opacity='.7'/%3E%3Crect x='10.5' y='10.5' width='5' height='5' rx='1.2' fill='%230b57a4'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Crect x='1' y='1' width='24' height='24' rx='6' fill='%230e4a7a'/%3E%3Crect x='8' y='8' width='10' height='10' rx='2.5' fill='none' stroke='%23fff' stroke-width='2.4'/%3E%3C/svg%3E"
     />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap"
-    />
+    <link rel="preload" href="styles/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/page.css" />
     <link rel="stylesheet" href="styles/maps.css" />
     <link rel="stylesheet" href="styles/hospital.css" />
     <link rel="stylesheet" href="styles/unit.css" />
+    <link rel="stylesheet" href="styles/world.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
   </head>
   <body>
     <header class="topbar">
       <div class="topbar-inner">
-        <a class="brand" href="#earth" aria-label="MetaHospital, back to Earth">
+        <a class="brand" href="#germany" aria-label="MetaHospital, home (Germany)">
           <svg viewBox="0 0 26 26" aria-hidden="true">
-            <rect x="1" y="1" width="24" height="24" rx="5" fill="none" stroke="var(--accent)" stroke-width="2" />
-            <rect x="6" y="6" width="14" height="14" rx="3" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.7" />
-            <rect x="10.5" y="10.5" width="5" height="5" rx="1.2" fill="var(--accent)" />
+            <rect x="1" y="1" width="24" height="24" rx="6" fill="var(--brand)" />
+            <rect x="8" y="8" width="10" height="10" rx="2.5" fill="none" stroke="var(--surface)" stroke-width="2.4" />
           </svg>
-          MetaHospital
+          <span class="brand-name">MetaHospital</span>
         </a>
-        <nav aria-label="Zoom level" style="display: contents">
+        <nav class="crumbs" aria-label="Where you are">
           <ol class="ladder" id="ladder"></ol>
         </nav>
-        <div class="simbar" id="simbar" role="toolbar" aria-label="Simulation controls"></div>
+        <button class="sim-toggle" id="sim-toggle" type="button" aria-expanded="false" aria-controls="simdrawer">Simulation</button>
       </div>
-      <div class="statusline" id="statusline"></div>
+      <div class="simdrawer" id="simdrawer" hidden>
+        <div class="simdrawer-inner">
+          <div class="simbar" id="simbar" role="toolbar" aria-label="Simulation controls for the demo twins"></div>
+          <div class="statusline" id="statusline"></div>
+        </div>
+      </div>
+      <div class="emergency-strip" id="emergency" hidden></div>
     </header>
 
     <main class="page" id="view" tabindex="-1"></main>
 
     <footer class="footer">
       <p>
-        MetaHospital MVP. Every patient, bed and hospital here is simulated; hospital names are fictional. Map data:
-        Natural Earth (public domain), German states from deutschlandGeoJSON (Unlicense), Berlin districts from Berliner
-        Morgenpost Berlin-Geodaten (CC BY, Amt für Statistik Berlin-Brandenburg).
+        MetaHospital, open source under the MIT licence. Real figures (DIVI-Intensivregister via the RKI, World Bank)
+        carry their source, date and licence on each page; the demo-twin hospitals are fictional and their numbers are
+        simulated. Map data: Natural Earth (public domain), Berlin districts from
+        Berliner Morgenpost Berlin-Geodaten (CC BY, Amt für Statistik Berlin-Brandenburg). Font: Inter (SIL OFL).
       </p>
     </footer>
 

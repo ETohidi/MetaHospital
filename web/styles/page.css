@@ -1,0 +1,705 @@
+/* Page anatomy shared by every level (World, Country, City, Hospital, Unit): provenance
+   badges, status pills, page head, five-slot KPI strip, main column and rail, panes, tables,
+   rail requests, the levels panel and the sources footer. Built by src/ui/page.js and
+   src/ui/levels.js. Tokens only (base.css), so light and dark both work. */
+.pg {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.pg .num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- provenance badge: every number says where it comes from -------------------------- */
+.prov {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  color: var(--ink-3);
+  cursor: default;
+}
+.prov::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.prov.is-live {
+  color: var(--surface);
+  background: var(--prov-real);
+  border-color: var(--prov-real);
+}
+.prov.is-official {
+  color: var(--surface);
+  background: var(--brand);
+  border-color: var(--brand);
+}
+/* Live data older than 2 days: greyed out, with its date in the label */
+.prov.is-stale {
+  color: var(--ink-3);
+  background: var(--surface-2);
+  border-color: var(--line-2);
+}
+.prov.is-estimated {
+  color: var(--prov-est);
+  border-style: dashed;
+}
+.prov.is-simulated {
+  color: var(--prov-ill);
+  background: color-mix(in srgb, var(--prov-ill) 10%, var(--surface));
+}
+.prov.is-illustrative {
+  color: var(--ink-3);
+}
+.prov.is-illustrative::before {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+.prov.is-notshown,
+.prov.is-unknown {
+  color: var(--ink-3);
+  border-color: var(--line-2);
+  background: var(--surface-2);
+}
+.prov.is-notshown::before,
+.prov.is-unknown::before {
+  display: none;
+}
+.prov.is-rule {
+  color: var(--prov-est);
+}
+
+/* -- status pill: colour plus a shape and a word ------------------------------------ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.pill::before {
+  font-size: 9px;
+  line-height: 1;
+}
+.pill.is-ok {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.pill.is-ok::before {
+  content: "●";
+}
+.pill.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.pill.is-warn::before {
+  content: "▲";
+}
+.pill.is-crit {
+  background: var(--crit-soft);
+  color: var(--crit);
+}
+.pill.is-crit::before {
+  content: "■";
+}
+.is-ok-text {
+  color: var(--good);
+}
+.is-warn-text {
+  color: var(--warn);
+}
+.is-crit-text {
+  color: var(--crit);
+}
+
+/* capability status for peers: a word, a reason, no number */
+.cap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.cap.is-ok {
+  color: var(--good);
+}
+.cap.is-warn {
+  color: var(--warn);
+}
+.cap.is-crit {
+  color: var(--crit);
+}
+.cap small {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.cap small::before {
+  content: "reason: ";
+}
+
+/* -- page head -------------------------------------------------------------------- */
+.pg-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 24px;
+}
+.pg-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pg-lvl {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.pg-head h1 {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.pg-q {
+  margin-top: 4px;
+  color: var(--ink-2);
+  max-width: 70ch;
+}
+.pg-sees {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-3);
+  max-width: 80ch;
+}
+.pg-sees-l {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.pg-sees-l::after {
+  content: ":";
+}
+.pg-head-side {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+.pg-fresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.pg-head-main {
+  grid-row: 1 / span 2;
+}
+.pg-head-extra {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+}
+
+/* -- KPI strip: five fixed slots ------------------------------------------------------ */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.kpi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "l b" "v v" "d d" "s s" "x x";
+  grid-template-rows: auto auto auto 1fr auto;
+  align-items: start;
+  column-gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.kpi.is-empty {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+.kpi.is-alert {
+  border-color: var(--crit);
+  box-shadow: inset 0 0 0 1px var(--crit-soft);
+}
+.kpi-l {
+  grid-area: l;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.kpi-b {
+  grid-area: b;
+  justify-self: end;
+}
+.kpi-v {
+  grid-area: v;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-v small {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+.kpi-d {
+  grid-area: d;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.kpi-spark {
+  grid-area: s;
+  align-self: end;
+  display: block;
+  width: 100%;
+  height: 24px;
+  padding-top: 6px;
+  overflow: visible;
+}
+
+.kpi-x {
+  grid-area: x;
+  min-width: 0;
+  margin-top: 8px;
+}
+
+/* -- main column and rail -------------------------------------------------------------- */
+.pg-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+}
+.pg-main,
+.pg-rail {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.pg-row2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* pane: a card with a header row, a body and a footer */
+.pane {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.pane-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.pane-head h2 {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+.pane-head p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.pane-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--crit-soft);
+  color: var(--crit);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: 2px;
+}
+.pane-body {
+  padding: 14px 16px;
+}
+.pane-body-tight {
+  padding-top: 0;
+}
+.pane-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.pane-note {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.pane .kv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+.pane .kv dt {
+  color: var(--ink-2);
+}
+.pane .kv dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.never {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.never b {
+  color: var(--ink);
+}
+
+/* tables in panes */
+table.t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+table.t th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-align: left;
+  white-space: nowrap;
+}
+table.t td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+table.t tbody tr:last-child td {
+  border-bottom: 0;
+}
+table.t .n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+table.t .show-s {
+  display: none;
+}
+
+/* -- rail: requests ------------------------------------------------------------------- */
+.req-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.req {
+  display: grid;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.req:last-child {
+  border-bottom: 0;
+}
+.req-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.req-from {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.req-what {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+.req-why {
+  font-size: 13px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.req.is-plan {
+  background: color-mix(in srgb, var(--brand-soft) 45%, transparent);
+}
+#hosp-plan-title:focus {
+  outline: none;
+}
+
+/* -- levels panel ------------------------------------------------------------------------ */
+.levels-ladder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 16px 0;
+  list-style: none;
+}
+.levels-ladder li {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.levels-ladder li a {
+  color: inherit;
+  text-decoration: none;
+}
+.levels-ladder li:has(a):hover {
+  border-color: var(--line-2);
+  color: var(--ink);
+}
+.levels-ladder li.is-here {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+}
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.levels-grid > div {
+  padding: 12px 16px 14px;
+  border-right: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.levels-grid > div:last-child {
+  border-right: 0;
+}
+.levels-grid h3 {
+  margin-bottom: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.levels-grid p {
+  max-width: none;
+}
+.levels-grid > div > p:first-of-type {
+  color: var(--ink);
+}
+.levels-sub {
+  margin-top: 6px;
+}
+.levels-basis {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.levels-basis::before {
+  content: "Basis: ";
+  font-weight: 600;
+}
+.levels-grid .is-never {
+  background: var(--surface-2);
+}
+.levels .pane-foot {
+  justify-content: flex-start;
+}
+
+/* -- sources footer -------------------------------------------------------------------- */
+.sources {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.sources-h {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.sources p {
+  max-width: none;
+}
+.sources .prov {
+  margin-right: 4px;
+}
+
+/* =====================================================================================
+   Responsive: one column below 1180px with the requests (rail) right under the KPIs
+   ===================================================================================== */
+@media (max-width: 1180px) {
+  .kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .kpi.is-empty {
+    display: none;
+  }
+  .pg-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .pg-grid > * {
+    width: 100%;
+  }
+  .pg-rail {
+    display: contents;
+  }
+  .pg-rail > .pane-req,
+  .pg-rail > #requests {
+    order: -1;
+  }
+  .pg-row2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .levels-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .levels-grid > div:nth-child(2) {
+    border-right: 0;
+  }
+  .levels-grid > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+}
+@media (max-width: 720px) {
+  .pg {
+    gap: 16px;
+  }
+  .pg-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pg-head-main,
+  .pg-head-extra {
+    grid-row: auto;
+    grid-column: auto;
+  }
+  .pg-head-side,
+  .pg-head-extra {
+    justify-items: start;
+    justify-self: stretch;
+  }
+  .pg-head h1 {
+    font-size: 22px;
+  }
+  .pg-fresh {
+    white-space: normal;
+  }
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .kpis .kpi:nth-child(5) {
+    grid-column: span 2;
+  }
+  .kpi {
+    padding: 12px;
+    grid-template-areas: "l l" "b b" "v v" "d d" "s s" "x x";
+    grid-template-rows: auto auto auto auto 1fr auto;
+  }
+  .kpi-b {
+    justify-self: start;
+    margin-top: 4px;
+  }
+  .kpi-v {
+    font-size: 22px;
+  }
+  .pg-main,
+  .pg-rail {
+    gap: 16px;
+  }
+  .pg-grid,
+  .pg-row2 {
+    gap: 16px;
+  }
+  table.t th,
+  table.t td {
+    padding: 8px;
+  }
+  table.t .hide-s,
+  table.t .stcol {
+    display: none;
+  }
+  table.t .show-s {
+    display: block;
+    margin-top: 4px;
+  }
+  .levels-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .levels-grid > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .levels-grid > div:last-child {
+    border-bottom: 0;
+  }
+}

@@ -1,124 +1,134 @@
-/* Layout concept: a bed-management console. A sticky top bar carries the zoom ladder
-   (Earth > Germany > Berlin > hospital > unit) and the simulation clock; below it, a wide
-   stage (map or bed board) with a narrow side panel that summarises the current level. */
+/* MetaHospital design tokens and shared components (the mh.css direction from the concept).
+   One anatomy at every level: app bar (where am I, Simulation drawer) > page head > KPI strip >
+   main column | right rail > levels panel > sources footer. Colours only through these tokens,
+   so the light and the dark theme both work. Inter is self-hosted (SIL OFL, styles/fonts/). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
-  /* colour: cool clinical neutrals, one signage blue, triage colours for acuity */
-  --bg: #f1f4f6;
+  --page: #f6f7f9;
   --surface: #ffffff;
-  --surface-2: #e7ecf0;
-  --ink: #0f1b2a;
-  --ink-2: #4b5b6c;
-  --ink-3: #5e6a77;
-  --line: #d3dbe2;
-  --accent: #0b57a4;
-  --accent-soft: #dbe8f6;
-  --accent-ink: #ffffff;
+  --surface-2: #f1f3f6;
+  --ink: #101828;
+  --ink-2: #475467;
+  --ink-3: #5f6b7d;
+  --line: #e4e7ec;
+  --line-2: #d0d5dd;
+  --brand: #0e4a7a;
+  --brand-soft: #e7f0f8;
 
-  /* semantic state (utilisation, safety) - separate from the accent */
-  --ok: #1d8455;
-  --ok-soft: #dcf1e6;
-  --warn: #b86e00;
-  --warn-soft: #fbecd2;
-  /* text on the -soft chips: darker than the fills so 12px labels reach 4.5:1 */
-  --ok-ink: #17704a;
-  --warn-ink: #8f5500;
-  --crit: #c3262f;
-  --crit-soft: #f9dfe0;
+  /* sequential (occupancy): one hue; more occupied = more contrast against the surface */
+  --seq-1: #cde2fb;
+  --seq-2: #9ec5f4;
+  --seq-3: #5598e7;
+  --seq-4: #256abf;
+  --seq-5: #104281;
 
-  /* acuity 1-5 on the Manchester Triage colour scale (blue, green, yellow, orange, red) */
+  /* status: reserved, always paired with a shape and a label */
+  --good: #0a7d33;
+  --good-soft: #e3f4e8;
+  --warn: #9a5200;
+  --warn-soft: #fdf0dc;
+  --warn-mark: #fab219;
+  --crit: #c4302b;
+  --crit-soft: #fbe5e3;
+
+  /* provenance */
+  --prov-real: #0a7d33;
+  --prov-est: #7a5a00;
+  --prov-ill: #6941c6;
+
+  /* acuity 1-5 on the Manchester Triage scale: used only at unit level */
   --tri-1: #2f6fdb;
   --tri-2: #2e9e4f;
   --tri-3: #d9a800;
   --tri-4: #e2701a;
   --tri-5: #d7263d;
-  /* text on the triage badges: dark ink on the light fills, white on the deep blue and red */
-  --tri-ink: #0f1b2a;
+  --tri-ink: #101828;
   --tri-ink-inv: #ffffff;
 
-  /* right-edge cue on horizontally scrollable tables */
-  --scroll-shade: rgba(15, 27, 42, 0.16);
-
-  /* maps */
-  --map-water: #e3eaef;
-  --map-land: #cfd8e0;
-  --map-line: #f7f9fa;
-  --map-active: #9fbfe2;
-  --map-muted: #dde3e8;
-
-  /* type */
-  --font-display: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "Public Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --step--1: 0.8125rem;
-  --step-0: 0.9375rem;
-  --step-1: 1.125rem;
-  --step-2: 1.5rem;
-  --step-3: 2rem;
-
-  /* shape */
-  --radius: 10px;
-  --radius-sm: 6px;
-  --gap: 16px;
-  --panel-w: 380px;
-  --shadow: 0 1px 2px rgba(15, 27, 42, 0.06), 0 4px 16px rgba(15, 27, 42, 0.06);
+  --scroll-shade: rgba(16, 24, 40, 0.14);
+  --r: 10px;
+  --r-sm: 6px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b1118;
-    --surface: #121a23;
-    --surface-2: #1a2430;
+    --page: #0c1117;
+    --surface: #141b23;
+    --surface-2: #1c2530;
     --ink: #e6edf3;
-    --ink-2: #9fb0c1;
-    --ink-3: #8193a5;
-    --line: #253240;
-    --accent: #5ea3ee;
-    --accent-soft: #15304d;
-    --accent-ink: #06121f;
-    --ok: #3cc47f;
-    --ok-soft: #10301f;
+    --ink-2: #a9b6c3;
+    --ink-3: #8f9cab;
+    --line: #26313d;
+    --line-2: #364352;
+    --brand: #6aaef0;
+    --brand-soft: #15304d;
+    --seq-1: #1a3350;
+    --seq-2: #22487a;
+    --seq-3: #2f69b3;
+    --seq-4: #6aa3e6;
+    --seq-5: #a8cdf7;
+    --good: #4cc88a;
+    --good-soft: #10301f;
     --warn: #eaa53c;
     --warn-soft: #36270d;
-  --ok-ink: var(--ok);
-  --warn-ink: var(--warn);
-    --crit: #f1575f;
+    --warn-mark: #fab219;
+    --crit: #f1666d;
     --crit-soft: #3b1518;
+    --prov-real: #4cc88a;
+    --prov-est: #d8b04a;
+    --prov-ill: #b39af5;
     --tri-1: #5b93f0;
     --tri-2: #45c06a;
     --tri-3: #f0c52c;
     --tri-4: #f58a3a;
     --tri-5: #f2505f;
-  --tri-ink: #06121f;
-  --tri-ink-inv: #06121f;
-  --scroll-shade: rgba(0, 0, 0, 0.55);
-    --map-water: #0e161f;
-    --map-land: #1f2b38;
-    --map-line: #0b1118;
-    --map-active: #1f4a78;
-    --map-muted: #18222d;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+    --tri-ink: #06121f;
+    --tri-ink-inv: #06121f;
+    --scroll-shade: rgba(0, 0, 0, 0.55);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b1118;
-  --surface: #121a23;
-  --surface-2: #1a2430;
+  --page: #0c1117;
+  --surface: #141b23;
+  --surface-2: #1c2530;
   --ink: #e6edf3;
-  --ink-2: #9fb0c1;
-  --ink-3: #8193a5;
-  --line: #253240;
-  --accent: #5ea3ee;
-  --accent-soft: #15304d;
-  --accent-ink: #06121f;
-  --ok: #3cc47f;
-  --ok-soft: #10301f;
+  --ink-2: #a9b6c3;
+  --ink-3: #8f9cab;
+  --line: #26313d;
+  --line-2: #364352;
+  --brand: #6aaef0;
+  --brand-soft: #15304d;
+  --seq-1: #1a3350;
+  --seq-2: #22487a;
+  --seq-3: #2f69b3;
+  --seq-4: #6aa3e6;
+  --seq-5: #a8cdf7;
+  --good: #4cc88a;
+  --good-soft: #10301f;
   --warn: #eaa53c;
   --warn-soft: #36270d;
-  --ok-ink: var(--ok);
-  --warn-ink: var(--warn);
-  --crit: #f1575f;
+  --warn-mark: #fab219;
+  --crit: #f1666d;
   --crit-soft: #3b1518;
+  --prov-real: #4cc88a;
+  --prov-est: #d8b04a;
+  --prov-ill: #b39af5;
   --tri-1: #5b93f0;
   --tri-2: #45c06a;
   --tri-3: #f0c52c;
@@ -127,12 +137,7 @@
   --tri-ink: #06121f;
   --tri-ink-inv: #06121f;
   --scroll-shade: rgba(0, 0, 0, 0.55);
-  --map-water: #0e161f;
-  --map-land: #1f2b38;
-  --map-line: #0b1118;
-  --map-active: #1f4a78;
-  --map-muted: #18222d;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
 
@@ -146,41 +151,46 @@ html,
 body {
   min-height: 100%;
 }
+/* Anything scrolled into view lands below the sticky app bar (--sticky-h is set by main.js). */
+html {
+  scroll-padding-top: calc(var(--sticky-h, 0px) + 12px);
+}
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--page);
   color: var(--ink);
-  font-family: var(--font-body);
-  font-size: var(--step-0);
-  line-height: 1.5;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
 }
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 1.15;
+  font-weight: 650;
+  line-height: 1.2;
   margin: 0;
   text-wrap: balance;
-  letter-spacing: 0.005em;
+  letter-spacing: -0.01em;
 }
 h1 {
-  font-size: var(--step-3);
+  font-size: 26px;
+  font-weight: 700;
 }
 h2 {
-  font-size: var(--step-2);
+  font-size: 18px;
 }
 h3 {
-  font-size: var(--step-1);
+  font-size: 15px;
 }
 p {
   margin: 0;
-  max-width: 65ch;
+  max-width: 70ch;
 }
 a {
-  color: var(--accent);
+  color: var(--brand);
 }
 button,
 input,
@@ -190,13 +200,12 @@ textarea {
   color: inherit;
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 svg {
   display: block;
 }
-/* The view takes focus on route changes (for screen readers); it needs no ring of its own. */
 #view:focus {
   outline: none;
 }
@@ -217,94 +226,160 @@ svg {
   border: 0;
 }
 
-/* -- shell ----------------------------------------------------------------- */
+/* -- app bar: logo, breadcrumb of places (level name under each), Simulation drawer -------- */
 .topbar {
   position: sticky;
-  /* --topbar-stick (main.js) is negative on phones, so only the simulation strip stays */
-  top: calc(env(safe-area-inset-top, 0px) + var(--topbar-stick, 0px));
+  top: env(safe-area-inset-top, 0px);
   z-index: 20;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
 .topbar-inner {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px 24px;
-  padding: 10px 20px;
-  max-width: 1480px;
+  gap: 20px;
+  height: 56px;
+  padding: 0 24px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex: none;
   text-decoration: none;
   color: var(--ink);
-  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 1.25rem;
-  letter-spacing: 0.01em;
+  font-size: 15px;
+  white-space: nowrap;
 }
 .brand svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
+}
+.crumbs {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.crumbs::-webkit-scrollbar {
+  display: none;
 }
 .ladder {
   display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center;
   gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
-  flex: 1 1 420px;
-  min-width: 0;
+  width: max-content;
 }
 .ladder li {
   display: flex;
   align-items: center;
 }
 .ladder li + li::before {
-  content: "›";
-  color: var(--ink-3);
-  padding: 0 4px;
+  content: "/";
+  color: var(--line-2);
+  padding: 0 2px;
 }
 .ladder a,
 .ladder span.step {
   display: flex;
-  flex-direction: column;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
   text-decoration: none;
   color: var(--ink-2);
+  white-space: nowrap;
+  font-size: 13.5px;
   line-height: 1.2;
 }
 .ladder a:hover {
   background: var(--surface-2);
   color: var(--ink);
 }
-.ladder .step-name {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1rem;
-}
 .ladder .step-scale {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 12px;
   color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 .ladder [aria-current="page"] {
-  background: var(--accent-soft);
+  background: var(--surface-2);
   color: var(--ink);
-}
-.ladder [aria-current="page"] .step-scale {
-  color: var(--accent);
+  font-weight: 600;
 }
 .ladder span.step.is-pending {
-  opacity: 0.55;
+  color: var(--ink-3);
+}
+.sim-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 12px 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sim-toggle:hover {
+  border-color: var(--line-2);
+  background: var(--surface-2);
+}
+.sim-toggle[aria-expanded="true"] {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+.sim-toggle svg {
+  width: 16px;
+  height: 16px;
+  color: var(--prov-ill);
+}
+.sim-toggle .sim-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.sim-toggle .sim-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--crit);
+}
+.sim-toggle .sim-chev {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--ink-3);
+  border-bottom: 1.5px solid var(--ink-3);
+  transform: translateY(-2px) rotate(45deg);
+}
+.sim-toggle[aria-expanded="true"] .sim-chev {
+  transform: translateY(2px) rotate(-135deg);
+}
+.simdrawer {
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.simdrawer[hidden] {
+  display: none;
+}
+.simdrawer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 10px 24px;
 }
 .simbar {
   display: flex;
@@ -322,60 +397,75 @@ svg {
   padding-right: 6px;
 }
 .clock-time {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 1.25rem;
+  font-weight: 650;
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
 }
 .clock-day {
-  font-size: var(--step--1);
-  color: var(--ink-2);
+  font-size: 12px;
+  color: var(--ink-3);
 }
 .statusline {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 6px 12px;
   align-items: center;
-  padding: 6px 20px;
-  max-width: 1480px;
-  margin: 0 auto;
-  font-size: var(--step--1);
+  font-size: 12.5px;
   color: var(--ink-2);
 }
-.banner-emergency {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  align-items: center;
+.status-seed {
+  font-variant-numeric: tabular-nums;
+}
+.emergency-strip {
+  border-top: 1px solid var(--crit);
   background: var(--crit-soft);
   color: var(--crit);
-  border: 1px solid var(--crit);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+}
+.emergency-strip[hidden] {
+  display: none;
+}
+.emergency-strip > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 6px 24px;
   font-weight: 600;
+  font-size: 13px;
 }
 .page {
-  max-width: 1480px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding-inline: 20px;
-  padding-block: 16px 40px;
+  padding: 24px 24px 40px;
 }
+.footer {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.footer p {
+  max-width: none;
+}
+
+/* legacy two-column layout still used by the Berlin map */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--panel-w);
-  gap: var(--gap);
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
   align-items: start;
 }
-.layout > * {
-  min-width: 0;
-}
+.layout > *,
 .stage {
   min-width: 0;
 }
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
+  gap: 16px;
   min-width: 0;
 }
 .view-head {
@@ -389,79 +479,73 @@ svg {
 .view-head p {
   color: var(--ink-2);
 }
-.footer {
-  max-width: 1480px;
-  margin: 0 auto;
-  padding-inline: 20px;
-  padding-block: 12px 32px;
-  font-size: 0.75rem;
-  color: var(--ink-3);
-}
-.footer p {
-  max-width: none;
-}
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 640px) {
-  .topbar-inner,
-  .statusline,
-  .page,
-  .footer {
-    padding-inline: 16px;
+@media (max-width: 720px) {
+  .topbar-inner {
+    gap: 8px;
+    height: 52px;
+    padding: 0 12px 0 16px;
   }
-  .ladder .step-scale {
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .ladder .step-scale,
+  .ladder li.is-pending,
+  .ladder li.is-far {
     display: none;
   }
-  /* Phone header: brand, ladder and status scroll away; the clock and the sim buttons
-     form a compact strip at the bottom of the header, which is all that stays on screen. */
-  .topbar {
-    display: flex;
-    flex-direction: column;
-  }
-  .topbar-inner {
-    display: contents;
-  }
-  .brand {
-    padding: 8px 16px 0;
-    font-size: 1.125rem;
-  }
-  .ladder {
-    flex: none;
-    padding: 4px 12px 0;
-  }
-  .ladder li + li::before {
-    padding: 0 1px;
+  .ladder li.is-up::before {
+    content: "‹";
+    color: var(--ink-3);
+    padding: 0 2px 0 0;
   }
   .ladder a,
   .ladder span.step {
-    padding: 3px 6px;
+    padding: 6px 6px;
+    font-size: 13px;
   }
-  .statusline {
-    order: 1;
-    padding-block: 6px;
+  .sim-toggle {
+    padding: 4px 10px 4px 8px;
+    gap: 6px;
   }
-  .statusline .chip-plain,
-  .statusline .status-seed {
+  .sim-toggle .sim-label,
+  .sim-toggle .sim-day {
     display: none;
   }
-  .simbar {
-    order: 2;
-    gap: 6px;
-    padding: 6px 16px;
-    border-top: 1px solid var(--line);
+  .simdrawer-inner,
+  .emergency-strip > div {
+    padding-inline: 16px;
   }
   .simbar .btn {
     padding-inline: 9px;
   }
-  .simbar .clock {
-    padding-right: 2px;
+  .simbar .clock,
+  .statusline .chip-plain,
+  .statusline .status-seed,
+  .emergency-strip .em-long {
+    display: none;
   }
-  .simbar .clock-time {
-    font-size: 1.0625rem;
+  .simdrawer-inner {
+    gap: 8px;
+    padding-block: 8px;
   }
+  .simbar {
+    gap: 6px;
+  }
+  .emergency-strip > div {
+    padding-block: 4px;
+    font-size: 12.5px;
+  }
+  #btn-play .btn-label,
   #btn-reset .btn-label {
     position: absolute;
     width: 1px;
@@ -470,13 +554,20 @@ svg {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  .page {
+    padding: 16px 16px 32px;
+  }
+  .footer {
+    padding-inline: 16px;
+  }
 }
 
 /* -- shared components ---------------------------------------------------- */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
   padding: 14px 16px;
   min-width: 0;
 }
@@ -489,11 +580,10 @@ svg {
   margin-top: 8px;
 }
 .eyebrow {
-  font-family: var(--font-display);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--ink-3);
 }
 .muted {
@@ -504,11 +594,7 @@ svg {
 }
 .mono,
 .num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-}
-.num {
-  font-family: inherit;
 }
 .stack {
   display: flex;
@@ -537,14 +623,14 @@ svg {
   gap: 2px;
 }
 .stat-value {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--step-2);
+  font-weight: 650;
+  font-size: 22px;
   line-height: 1.1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .stat-label {
-  font-size: var(--step--1);
+  font-size: 12.5px;
   color: var(--ink-2);
 }
 .kv {
@@ -552,7 +638,7 @@ svg {
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 0;
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .kv dt {
   color: var(--ink-2);
@@ -571,12 +657,12 @@ svg {
   gap: 6px;
   min-height: 34px;
   padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
   background: var(--surface);
   color: var(--ink);
   font-weight: 600;
-  font-size: var(--step--1);
+  font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
@@ -593,9 +679,9 @@ svg {
   height: 14px;
 }
 .btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--surface);
 }
 .btn-primary:hover:not(:disabled) {
   border-color: var(--ink);
@@ -608,8 +694,8 @@ svg {
   border-color: var(--crit);
 }
 .btn-ok {
-  background: var(--ok);
-  border-color: var(--ok);
+  background: var(--good);
+  border-color: var(--good);
   color: var(--surface);
 }
 .btn-ghost {
@@ -617,12 +703,12 @@ svg {
   border-color: transparent;
 }
 .btn-ghost:hover:not(:disabled) {
-  background: var(--surface-2);
-  border-color: transparent;
+  background: var(--surface);
+  border-color: var(--line);
 }
 .btn[aria-pressed="true"] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+  background: var(--brand-soft);
+  border-color: var(--brand);
 }
 
 /* form controls */
@@ -630,11 +716,11 @@ svg {
 .input {
   min-height: 34px;
   padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
   background: var(--surface);
   color: var(--ink);
-  font-size: var(--step--1);
+  font-size: 13px;
   width: 100%;
   min-width: 0;
 }
@@ -646,7 +732,7 @@ svg {
   gap: 5px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.6;
   white-space: nowrap;
@@ -664,20 +750,20 @@ svg {
   display: none;
 }
 .chip-ok {
-  background: var(--ok-soft);
-  color: var(--ok-ink);
+  background: var(--good-soft);
+  color: var(--good);
 }
 .chip-warn {
   background: var(--warn-soft);
-  color: var(--warn-ink);
+  color: var(--warn);
 }
 .chip-crit {
   background: var(--crit-soft);
   color: var(--crit);
 }
 .chip-accent {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 /* utilisation meter */
@@ -692,7 +778,7 @@ svg {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 4px;
-  background: var(--ok);
+  background: var(--good);
 }
 .meter.is-warn > span {
   background: var(--warn);
@@ -706,8 +792,7 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
 }
@@ -721,7 +806,7 @@ svg {
 .conf-fill {
   display: block;
   height: 100%;
-  background: var(--ok);
+  background: var(--good);
 }
 .conf.is-warn .conf-fill {
   background: var(--warn);
@@ -730,7 +815,7 @@ svg {
   background: var(--crit);
 }
 
-/* acuity (triage colour) */
+/* acuity (triage colour; unit level only) */
 .tri {
   display: inline-flex;
   align-items: center;
@@ -739,9 +824,9 @@ svg {
   height: 20px;
   padding: 0 5px;
   border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--tri-ink-inv);
   background: var(--ink-3);
 }
@@ -768,8 +853,7 @@ svg {
 .table-wrap {
   overflow-x: auto;
   min-width: 0;
-  /* Right-edge shade while more columns hide off-screen: the cover scrolls with the content
-     (local) and sits at its end, so the shade disappears once the viewer reaches the edge. */
+  /* Right-edge shade while more columns hide off-screen. */
   background:
     linear-gradient(to left, var(--surface) 40%, transparent) right center / 28px 100% no-repeat local,
     linear-gradient(to left, var(--scroll-shade), transparent) right center / 14px 100% no-repeat scroll;
@@ -777,17 +861,14 @@ svg {
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .table th {
   text-align: left;
-  font-family: var(--font-display);
   font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 12px;
   color: var(--ink-3);
-  padding: 6px 8px;
+  padding: 8px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
@@ -818,13 +899,12 @@ svg {
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid var(--line);
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .feed li:last-child {
   border-bottom: 0;
 }
 .feed time {
-  font-family: var(--font-mono);
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -837,7 +917,7 @@ svg {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--ink-2);
 }
 .legend span {
@@ -862,22 +942,22 @@ svg {
   flex-direction: column;
   gap: 8px;
   max-width: min(360px, calc(100vw - 32px));
+  /* Toasts only inform: clicks pass through to the buttons underneath (Approve, Reject). */
+  pointer-events: none;
 }
 .toast {
   background: var(--ink);
-  color: var(--bg);
+  color: var(--page);
   padding: 10px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   box-shadow: var(--shadow);
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 
-/* view transition on route change */
+/* view transition on route change: movement only, so screenshots never catch a faded view */
 .view-enter {
   animation: view-enter 260ms ease-out;
 }
-/* Movement only, no fade: the view is fully visible from the first frame (thumbnails,
-   link previews and screenshots may capture it mid-animation). */
 @keyframes view-enter {
   from {
     transform: translateY(6px);

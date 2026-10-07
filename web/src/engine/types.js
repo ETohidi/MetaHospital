@@ -201,4 +201,45 @@
  * @property {number} bundleCount        plans kept (the newest BUNDLE_LIMIT = 168, a week of hours)
  */
 
+// -- Real open data (not the engine): written by tools/build-data.mjs, loaded by src/data/real.js ---------
+// The engine never reads these; views get them as ctx.data, with ctx.dataState "loading"|"ready"|"failed".
+/**
+ * @typedef {Object} Provenance          applies to every value in the file that carries it
+ * @property {"Live"|"Official"} kind
+ * @property {string} source
+ * @property {string} url
+ * @property {string} licence            e.g. "CC BY 4.0"
+ * @property {string|null} asOf          "YYYY-MM-DD": report day (DIVI) or last update (World Bank)
+ * @property {string|null} generatedAt   ISO time the file was built
+ *
+ * @typedef {Object} IcuFigures          one DIVI row, adults; null where DIVI reports NA
+ * @property {number} areas              reporting areas (Meldebereiche)
+ * @property {number} occupied
+ * @property {number} free
+ * @property {number} reserve            7-day emergency reserve
+ * @property {number} ventFree           free invasive ventilation places
+ * @property {{regular: number, partly: number, limited: number, noStatement: number}} status   areas per operating status
+ * @property {{staff: number, material: number, room: number, equipment: number}} limits       areas per limitation reason
+ *
+ * @typedef {{date: string, occupied: number, free: number}} IcuDay
+ *
+ * @typedef {Object} GermanyIcu          web/data/de-icu.json
+ * @property {string} asOf
+ * @property {Provenance} meta
+ * @property {"adults"} group
+ * @property {IcuFigures & {series: IcuDay[]}} national          the RKI national file
+ * @property {(IcuFigures & {id: string, name: string, series: IcuDay[]})[]} laender   16, id "01".."16"
+ *
+ * @typedef {{value: number, year: number}} YearValue
+ *
+ * @typedef {Object} WorldBeds           web/data/world.json
+ * @property {Provenance} meta
+ * @property {{iso3: string, name: string, beds: YearValue|null, population: YearValue|null}[]} countries   null = Unknown, never 0
+ *
+ * @typedef {Object} RealData            what loadRealData() resolves
+ * @property {GermanyIcu|null} de
+ * @property {WorldBeds|null} world
+ * @property {Object<string, Error>} errors   per file that failed
+ */
+
 export {};

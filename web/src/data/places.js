@@ -47,13 +47,3 @@ export const UNIT_BY_ID = { ed: "ED", icu: "ICU", ward: "Ward" };
 export const UNIT_LABEL = { ED: "Emergency Department", ICU: "Intensive Care", Ward: "General Ward" };
 
 export const BERLIN = { name: "Berlin", lat: 52.52, lon: 13.405, areaKm2: 891 };
-
-// Other German cities, shown on the Germany level as not yet connected to the network.
-export const OTHER_CITIES = [
-  { name: "Hamburg", lat: 53.551, lon: 9.994 },
-  { name: "München", lat: 48.137, lon: 11.575 },
-  { name: "Köln", lat: 50.938, lon: 6.96 },
-  { name: "Frankfurt", lat: 50.11, lon: 8.682 },
-  { name: "Leipzig", lat: 51.34, lon: 12.375 },
-  { name: "Dresden", lat: 51.05, lon: 13.738 },
-];

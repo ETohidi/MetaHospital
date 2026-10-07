@@ -1,0 +1,416 @@
+/* World screen (ui/world.js): the choropleth and the country table. The page head, KPI strip,
+   levels panel and sources come from page.css. Tokens only, so light and dark both work. */
+
+.world {
+  --w-gap: 20px;
+  display: grid;
+  gap: var(--w-gap);
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.world h1,
+.world h2 {
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.world a {
+  color: var(--brand);
+}
+.w-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.w-muted {
+  color: var(--ink-3);
+}
+
+/* -- unknown values (never shown as 0) ------------------------------------------------------- */
+
+.w-unknown {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* -- layout and cards ------------------------------------------------------------------------- */
+
+.w-stack {
+  display: grid;
+  gap: var(--w-gap);
+  min-width: 0;
+}
+.w-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.w-card-h {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.w-card-h h2 {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.w-card-h p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.w-card-f {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.w-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--ink-3);
+}
+
+/* -- the choropleth ----------------------------------------------------------------------------- */
+.w-map-wrap {
+  position: relative;
+  padding: 8px 8px 0;
+}
+.w-map {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.w-sphere {
+  fill: var(--surface-2);
+  stroke: var(--line);
+  stroke-width: 0.5;
+}
+.w-c {
+  stroke: var(--surface);
+  stroke-width: 0.4;
+  cursor: pointer;
+}
+.w-c:hover {
+  stroke: var(--ink);
+  stroke-width: 0.8;
+}
+.w-c-unknown {
+  fill: var(--page);
+  stroke: var(--line-2);
+}
+
+.w-bin-1 {
+  fill: var(--seq-1);
+  background: var(--seq-1);
+}
+.w-bin-2 {
+  fill: var(--seq-2);
+  background: var(--seq-2);
+}
+.w-bin-3 {
+  fill: var(--seq-3);
+  background: var(--seq-3);
+}
+.w-bin-4 {
+  fill: var(--seq-4);
+  background: var(--seq-4);
+}
+.w-bin-5 {
+  fill: var(--seq-5);
+  background: var(--seq-5);
+}
+
+/* Old values: the bin colour stays, crossed by stripes of the page colour. */
+.w-c-old {
+  fill: url(#w-hatch);
+  pointer-events: none;
+}
+.w-hatch-gap {
+  fill: var(--surface);
+  opacity: 0.5;
+}
+.w-outline {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 0.9;
+  pointer-events: none;
+}
+.w-outline.is-sel {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.w-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12.5px;
+  line-height: 1.4;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+.w-tip[hidden] {
+  display: none;
+}
+.w-tip b,
+.w-tip span {
+  display: block;
+}
+.w-tip span {
+  opacity: 0.75;
+  font-size: 11.5px;
+}
+.w-tip em {
+  display: block;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.w-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.w-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.w-legend-title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.w-sw {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--line-2);
+}
+.w-sw-unknown {
+  background: var(--page);
+}
+.w-sw-old {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 2px,
+    var(--surface) 2px 4px
+  );
+}
+
+/* the selected country, under the map */
+.w-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.w-focus-name {
+  font-size: 15px;
+  color: var(--ink);
+}
+.w-focus-v {
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.w-old-tag,
+.w-year-old {
+  color: var(--warn);
+  font-weight: 600;
+}
+.w-old-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  font-size: 11.5px;
+}
+.w-note {
+  flex-basis: 100%;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.w-down {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: var(--brand);
+  color: var(--surface) !important;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.w-down:hover,
+.w-down:focus-visible {
+  filter: brightness(1.1);
+}
+.w-nodown {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+/* -- the country table ---------------------------------------------------------------------------- */
+.w-table-wrap {
+  overflow-x: auto;
+}
+.w-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.w-table th,
+.w-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+.w-table thead th {
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.w-table tbody th {
+  font-weight: 600;
+}
+.w-table .n {
+  text-align: right;
+}
+.w-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.w-table tbody tr:hover {
+  background: var(--surface-2);
+}
+.w-table tr.is-sel {
+  background: var(--brand-soft);
+}
+.w-table tr.is-de th {
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+.w-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.w-sort:hover {
+  background: var(--surface-2);
+}
+.w-sort.is-on {
+  color: var(--ink);
+}
+.w-sort-i {
+  font-size: 10px;
+  opacity: 0.7;
+}
+.w-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+a.w-name {
+  color: var(--brand);
+  text-decoration: none;
+}
+a.w-name:hover,
+.w-pick:hover {
+  text-decoration: underline;
+}
+.w-cell-v {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.w-fn {
+  margin-left: 2px;
+  color: var(--ink-3);
+  cursor: help;
+}
+.w-more {
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.w-more:hover {
+  background: var(--surface-2);
+}
+
+/* -- level panel ------------------------------------------------------------------------------------ */
+
+/* -- sources footer ------------------------------------------------------------------------------- */
+
+.world :focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* -- responsive ------------------------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+  .world {
+    --w-gap: 16px;
+  }
+  .world h1 {
+    font-size: 22px;
+  }
+
+  .w-map-wrap {
+    padding: 4px 0 0;
+  }
+  .w-table th,
+  .w-table td {
+    padding: 7px 8px;
+  }
+  .w-hide-s {
+    display: none;
+  }
+  .w-down {
+    margin-left: 0;
+  }
+}

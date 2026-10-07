@@ -2,11 +2,19 @@
    cards. SVG sizes below are in viewBox units; container queries enlarge the labels when
    the map is drawn small, and hide the secondary ones when there is no room. */
 
+/* Map colours, derived from the shared tokens so light and dark themes both work. */
+.map-card,
+.map-svg {
+  --map-water: var(--surface-2);
+  --map-land: color-mix(in srgb, var(--line-2) 70%, var(--surface));
+  --map-line: var(--surface);
+  --map-active: color-mix(in srgb, var(--seq-2) 70%, var(--surface));
+}
+
 /* -- map card ---------------------------------------------------------------- */
 .map-card {
   container-type: inline-size;
 }
-.map-card-germany,
 .map-card-berlin {
   background: var(--map-water);
 }
@@ -15,10 +23,6 @@
   height: auto;
   max-height: 78vh;
   background: var(--surface);
-}
-.map-svg-germany {
-  max-height: min(80vh, 880px);
-  background: var(--map-water);
 }
 .map-svg-berlin {
   background: var(--map-water);
@@ -47,27 +51,11 @@
 }
 
 /* -- base layers ---------------------------------------------------------------- */
-.map-sphere,
+
 .map-water {
   fill: var(--map-water);
 }
-.map-sphere {
-  stroke: var(--line);
-  stroke-width: 1;
-}
-.map-graticule {
-  stroke: color-mix(in srgb, var(--ink-3) 22%, transparent);
-  stroke-width: 0.5;
-}
-.map-land {
-  fill: var(--map-land);
-}
-.map-borders {
-  stroke: var(--map-line);
-  stroke-width: 0.6;
-  stroke-linejoin: round;
-}
-.map-state,
+
 .map-district {
   fill: var(--map-land);
   stroke: var(--map-line);
@@ -80,7 +68,7 @@
 .map-district.has-hospital {
   fill: color-mix(in srgb, var(--map-active) 45%, var(--map-land));
 }
-.map-state:hover,
+
 .map-district:hover {
   fill: color-mix(in srgb, var(--map-land) 80%, var(--ink-3));
 }
@@ -91,16 +79,14 @@
 /* -- labels (halo keeps them readable over borders and land) ------------------------ */
 .map-label,
 .map-link-label,
-.map-city-label,
 .map-district-label,
 .map-scale-label {
-  font-family: var(--font-body);
+  font-family: inherit;
   paint-order: stroke;
   stroke-linejoin: round;
 }
 /* labels inside a clickable group are part of its target; the rest let hovers through */
 .map-link-label,
-.map-city-label,
 .map-district-label,
 .map-scale-label {
   pointer-events: none;
@@ -110,32 +96,24 @@
   stroke: var(--surface);
   stroke-width: 4px;
 }
-.map-label-name,
+
 .map-pin-name {
-  font-family: var(--font-display);
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.01em;
 }
-.map-label-detail,
+
 .map-pin-detail {
   font-size: 13px;
   font-weight: 500;
   fill: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
-.map-label-berlin .map-label-name {
-  font-size: 19px;
-}
+
 .map-pin-name {
   font-size: 15px;
 }
-.map-city-label {
-  font-size: 13px;
-  fill: var(--ink-3);
-  stroke: var(--map-land);
-  stroke-width: 3px;
-}
+
 .map-district-label {
   font-size: 11px;
   font-weight: 600;
@@ -154,7 +132,7 @@
   font-variant-numeric: tabular-nums;
 }
 .map-link-divert {
-  fill: var(--accent);
+  fill: var(--brand);
 }
 .map-scale-bar {
   stroke: var(--ink-2);
@@ -168,41 +146,10 @@
 }
 
 /* -- places and markers ------------------------------------------------------------------ */
-.map-city-dot {
-  fill: var(--ink-3);
-  stroke: var(--map-land);
-  stroke-width: 1.5;
-}
-.map-de,
-.map-be {
-  fill: var(--map-active);
-  stroke: var(--accent);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-  transition: fill 150ms ease;
-}
-.map-be {
-  stroke-width: 1.8;
-}
-.map-marker {
-  fill: var(--accent);
-  stroke: var(--surface);
-  stroke-width: 1.5;
-}
-.map-ring {
-  fill: none;
-  stroke-width: 3.5;
-  stroke: var(--ok);
-}
-.map-ring.is-warn {
-  stroke: var(--warn);
-}
-.map-ring.is-crit {
-  stroke: var(--crit);
-}
+
 .map-pulse {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--brand);
   stroke-width: 2;
   transform-box: fill-box;
   transform-origin: center;
@@ -234,15 +181,10 @@
   stroke: transparent;
   stroke-width: 0;
 }
-.map-target-ring {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.5;
-  opacity: 0.7;
-}
+
 .map-focus {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--brand);
   stroke-width: 2.5;
   stroke-dasharray: 4 3;
   opacity: 0;
@@ -258,20 +200,14 @@
   stroke-dasharray: none;
   stroke-width: 3;
 }
-.map-hit:hover .map-de,
-.map-hit:focus-visible .map-de,
-.map-hit:hover .map-be,
-.map-hit:focus-visible .map-be {
-  fill: color-mix(in srgb, var(--map-active) 65%, var(--accent));
-}
-.map-hit:focus-visible .map-label-name,
+
 .map-pin:focus-visible .map-pin-name {
   text-decoration: underline;
 }
 
 /* hospital pins */
 .map-pin-dot {
-  fill: var(--ok);
+  fill: var(--good);
   stroke: var(--surface);
   stroke-width: 2.5;
 }
@@ -283,7 +219,7 @@
 }
 .map-pin-own {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--brand);
   stroke-width: 3;
 }
 .map-pin:hover .map-pin-dot {
@@ -298,7 +234,7 @@
   stroke-linecap: round;
 }
 .map-link-group.is-divert .map-link {
-  stroke: var(--accent);
+  stroke: var(--brand);
   stroke-width: 2.6;
   stroke-dasharray: 6 3;
   animation: map-flow 1200ms linear infinite;
@@ -324,29 +260,20 @@
 .map-layout:has(.map-pin-3:is(:hover, :focus-visible)) .map-hcard-3,
 .map-layout:has(.map-pin-4:is(:hover, :focus-visible)) .map-hcard-4,
 .map-layout:has(.map-pin-5:is(:hover, :focus-visible)) .map-hcard-5 {
-  border-color: var(--accent);
+  border-color: var(--brand);
 }
 
 /* legend swatches */
-.map-sw-active {
-  background: var(--map-active);
-  box-shadow: inset 0 0 0 1.5px var(--accent);
-}
-.map-sw-ring,
+
 .map-sw-own {
   border-radius: 50%;
-  box-shadow: inset 0 0 0 2.5px var(--accent);
+  box-shadow: inset 0 0 0 2.5px var(--brand);
   background: transparent;
 }
-.map-sw-city {
-  border-radius: 50%;
-  width: 8px;
-  height: 8px;
-  background: var(--ink-3);
-}
+
 .map-sw-tone {
   border-radius: 50%;
-  background: var(--ok);
+  background: var(--good);
 }
 .map-sw-tone.is-warn {
   background: var(--warn);
@@ -354,17 +281,7 @@
 .map-sw-tone.is-crit {
   background: var(--crit);
 }
-.map-sw-ring-tone {
-  border-radius: 50%;
-  background: transparent;
-  box-shadow: inset 0 0 0 2.5px var(--ok);
-}
-.map-sw-ring-tone.is-warn {
-  box-shadow: inset 0 0 0 2.5px var(--warn);
-}
-.map-sw-ring-tone.is-crit {
-  box-shadow: inset 0 0 0 2.5px var(--crit);
-}
+
 .map-sw-link {
   width: 18px;
   height: 0;
@@ -409,9 +326,6 @@
   .map-label-berlin .map-label-name {
     font-size: 28px;
   }
-  .map-svg-germany .map-label-detail {
-    font-size: 20px;
-  }
   .map-city-label {
     font-size: 20px;
   }
@@ -430,111 +344,18 @@
 }
 
 /* -- panels -------------------------------------------------------------------------------- */
-.map-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.map-summary h3 {
-  margin-top: 2px;
-}
+
 /* long chips (the emergency one) wrap inside the side cards instead of running past them */
-.map-summary .chip,
+
 .map-hcard .chip {
   white-space: normal;
   max-width: 100%;
 }
-.map-stats,
+
 .map-free {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-}
-.map-levels {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.map-levels a {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 1px 10px;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  color: var(--ink);
-  text-decoration: none;
-}
-.map-levels a:hover {
-  background: var(--surface-2);
-}
-.map-levels a[aria-current="page"] {
-  background: var(--accent-soft);
-}
-.map-lvl-num {
-  grid-row: span 2;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1.5px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--ink-2);
-}
-.map-levels a[aria-current="page"] .map-lvl-num {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
-.map-lvl-title {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0 10px;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1rem;
-}
-.map-lvl-scale {
-  font-family: var(--font-mono);
-  font-weight: 400;
-  font-size: 0.75rem;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-.map-lvl-shows {
-  font-size: var(--step--1);
-  color: var(--ink-2);
-}
-.map-cities {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 14px;
-  font-size: var(--step--1);
-}
-.map-cities li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 8px;
-}
-.map-city-mark {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ink-3);
-}
-.map-note {
-  margin-top: 10px;
-  font-size: var(--step--1);
 }
 
 /* hospital cards (Berlin) */
@@ -545,7 +366,7 @@
   transition: border-color 120ms ease;
 }
 .map-hcard.is-own {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
 }
 .map-hcard-head {
   display: grid;
@@ -554,14 +375,14 @@
   gap: 10px;
 }
 .map-hcard-title .faint {
-  font-size: var(--step--1);
+  font-size: 0.8125rem;
 }
 .map-dot {
   width: 12px;
   height: 12px;
   margin-top: 4px;
   border-radius: 50%;
-  background: var(--ok);
+  background: var(--good);
 }
 .map-dot.is-warn {
   background: var(--warn);
@@ -574,7 +395,7 @@
   grid-template-columns: 3em minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px 10px;
-  font-size: var(--step--1);
+  font-size: 0.8125rem;
 }
 .map-units .meter {
   height: 5px;
@@ -597,9 +418,9 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   background: var(--surface-2);
-  font-size: var(--step--1);
+  font-size: 0.8125rem;
 }
 .map-report-head {
   display: flex;
@@ -612,7 +433,7 @@
   margin-top: 8px;
 }
 .map-coordinator p {
-  font-size: var(--step--1);
+  font-size: 0.8125rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -623,5 +444,709 @@
   }
   .map-link-group.is-divert .map-link {
     animation: none;
+  }
+}
+
+/* =================================================================================================
+   Country (Germany) and City (Berlin) pages: page head, KPI strip, context strip, cards, Länder
+   tile grid and table, rail, level ladder, sources. Colours only through the shared tokens.
+   ================================================================================================= */
+.geo-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-size: 14px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+.geo-page h1,
+.geo-page h2,
+.geo-page h3 {
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.geo-page p {
+  margin: 0;
+}
+.geo-muted {
+  color: var(--ink-3);
+}
+.geo-page a {
+  color: var(--brand);
+}
+
+/* -- page head -- */
+
+/* -- provenance badges: every number says where it comes from -- */
+
+/* -- status pills: always icon + label -- */
+.geo-st {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.geo-st::before {
+  font-size: 10px;
+  line-height: 1;
+}
+.geo-st.is-ok {
+  background: var(--good-soft);
+  color: var(--good);
+}
+.geo-st.is-ok::before {
+  content: "●";
+}
+.geo-st.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.geo-st.is-warn::before {
+  content: "▲";
+}
+.geo-st.is-crit {
+  background: var(--crit-soft);
+  color: var(--crit);
+}
+.geo-st.is-crit::before {
+  content: "■";
+}
+.geo-st.is-mute {
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+/* -- KPI strip: five fixed slots -- */
+
+.geo-segs {
+  display: flex;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.geo-segs i,
+.geo-segs-key i {
+  display: block;
+  height: 100%;
+}
+.geo-segs .is-staff,
+.geo-segs-key .is-staff {
+  background: var(--seq-4);
+}
+.geo-segs .is-ok,
+.geo-segs-key .is-ok {
+  background: var(--seq-1);
+}
+.geo-segs .is-none,
+.geo-segs-key .is-none {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--line-2) 0 2px,
+    var(--surface-2) 2px 5px
+  );
+}
+.geo-segs-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.geo-segs-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.geo-segs-key i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* -- sparklines -- */
+.geo-spark {
+  display: block;
+  width: 72px;
+  height: 22px;
+}
+.geo-spark-line {
+  fill: none;
+  stroke: var(--seq-4);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.geo-spark-dot {
+  fill: var(--seq-5);
+}
+.geo-spark-ref {
+  stroke: var(--line-2);
+  stroke-dasharray: 2 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* -- context strip (annual, Official) -- */
+.geo-ctx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 24px;
+  padding: 10px 16px;
+  margin-top: -8px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r);
+}
+.geo-ctx b {
+  color: var(--ink);
+}
+.geo-ctx-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* -- layout and cards -- */
+.geo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+}
+.geo-stack,
+.geo-rail {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.geo-card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+.geo-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.geo-card-head h2 {
+  font-size: 15px;
+  font-weight: 650;
+}
+.geo-card-head p {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.geo-body {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.geo-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.geo-state {
+  display: grid;
+  gap: 4px;
+  padding: 18px 16px;
+  border-style: dashed;
+}
+.geo-state.is-failed {
+  border-color: var(--crit);
+}
+
+/* -- Länder: tile grid beside the table -- */
+.geo-two {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+.geo-mapcol {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-right: 1px solid var(--line);
+}
+.geo-tiles {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  margin: 0 auto;
+}
+.geo-tile-bg {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.geo-tile.is-s1 .geo-tile-bg {
+  fill: var(--seq-1);
+}
+.geo-tile.is-s2 .geo-tile-bg {
+  fill: var(--seq-2);
+}
+.geo-tile.is-s3 .geo-tile-bg {
+  fill: var(--seq-3);
+}
+.geo-tile.is-s4 .geo-tile-bg {
+  fill: var(--seq-4);
+}
+.geo-tile.is-s5 .geo-tile-bg {
+  fill: var(--seq-5);
+}
+.geo-tile.is-s0 .geo-tile-bg {
+  fill: var(--surface-2);
+}
+.geo-tile text {
+  text-anchor: middle;
+  pointer-events: none;
+  fill: var(--ink);
+}
+.geo-tile.is-s4 text,
+.geo-tile.is-s5 text {
+  fill: var(--surface);
+}
+.geo-tile-code {
+  font-size: 17px;
+  font-weight: 700;
+}
+.geo-tile-pct {
+  font-size: 15px;
+  font-weight: 600;
+}
+.geo-tile-areas {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+.geo-tile-alert {
+  fill: none;
+  stroke: var(--crit);
+  stroke-width: 3;
+}
+.geo-tile.is-alert .geo-tile-bg {
+  stroke: var(--crit);
+}
+.geo-tile.is-hl .geo-tile-bg,
+.geo-tile.is-link:hover .geo-tile-bg {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+.geo-tile.is-link {
+  cursor: pointer;
+  outline: none;
+}
+.geo-tile.is-link:focus-visible .geo-tile-bg {
+  stroke: var(--brand);
+  stroke-width: 4;
+}
+.geo-tiles-note {
+  font-size: 12px;
+  text-align: center;
+}
+.geo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.geo-ramp {
+  display: inline-flex;
+}
+.geo-ramp i {
+  display: inline-block;
+  width: 26px;
+  height: 10px;
+}
+.geo-ramp i:first-child {
+  border-radius: 3px 0 0 3px;
+}
+.geo-ramp i:last-child {
+  border-radius: 0 3px 3px 0;
+}
+.geo-ramp-l {
+  display: flex;
+  justify-content: space-between;
+  width: 130px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.geo-kbs {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.geo-kbs h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+}
+.geo-kbr {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 78px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.geo-kbr span:last-child {
+  text-align: right;
+  color: var(--ink-2);
+}
+
+/* occupancy bars with 85 % and 90 % ticks; fills on the sequential ramp */
+.geo-bar {
+  position: relative;
+  height: 8px;
+  min-width: 60px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.geo-bar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+}
+.geo-bar > b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  background: var(--ink-3);
+  opacity: 0.6;
+}
+.geo-page .is-s0 {
+  background: var(--line-2);
+}
+.geo-page .is-s1 {
+  background: var(--seq-1);
+}
+.geo-page .is-s2 {
+  background: var(--seq-2);
+}
+.geo-page .is-s3 {
+  background: var(--seq-3);
+}
+.geo-page .is-s4 {
+  background: var(--seq-4);
+}
+.geo-page .is-s5 {
+  background: var(--seq-5);
+}
+.geo-pct {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.geo-pct .geo-bar {
+  flex: 1;
+}
+.geo-pct span {
+  width: 48px;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* table */
+.geo-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+.geo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.geo-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.geo-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.geo-table tr:last-child td {
+  border-bottom: 0;
+}
+.geo-table .n {
+  text-align: right;
+}
+.geo-col-occ {
+  min-width: 140px;
+}
+.geo-table tbody tr:not(.geo-grp):hover,
+.geo-table tbody tr.is-hl {
+  background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface));
+}
+.geo-table tr.is-link {
+  cursor: pointer;
+}
+.geo-table tr.is-link .geo-name {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.geo-grp td {
+  padding: 6px 12px;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.geo-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.geo-areas {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.geo-spark-none {
+  color: var(--ink-3);
+}
+
+/* -- rail -- */
+.geo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.geo-list li {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.geo-list li:last-child {
+  border-bottom: 0;
+}
+.geo-li-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.geo-from {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.geo-what {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.geo-why {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.geo-empty {
+  padding: 12px 16px 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.geo-nbs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.geo-nbs li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.geo-nbs li:last-child {
+  border-bottom: 0;
+}
+.geo-nbs small {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.geo-ccs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  grid-column: 1 / -1;
+}
+.geo-cc {
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.geo-kv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+.geo-kv dt {
+  color: var(--ink-2);
+}
+.geo-kv dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
+.geo-never {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.geo-never b {
+  color: var(--ink);
+}
+
+/* -- level ladder -- */
+
+/* -- sources footer -- */
+
+/* -- Berlin: demo twins block -- */
+.geo-demo {
+  border-color: color-mix(in srgb, var(--prov-ill) 45%, var(--line));
+}
+.geo-demo-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 32px;
+  padding: 12px 16px 14px;
+}
+.geo-demo-stats > div {
+  display: grid;
+}
+.geo-demo-v {
+  font-size: 20px;
+  font-weight: 650;
+}
+.geo-demo-v small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.geo-demo-l {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.geo-demo-surge .chip {
+  white-space: normal;
+}
+.geo-be .map-layout {
+  margin-top: -4px;
+}
+.map-hcard-head .row {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+/* -- responsive -- */
+@media (max-width: 1180px) {
+  .geo-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .geo-grid > * {
+    width: 100%;
+  }
+  .geo-rail {
+    display: contents;
+  }
+  .geo-alerts {
+    order: -1;
+  }
+  .geo-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .geo-mapcol {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .geo-tiles {
+    max-width: 360px;
+  }
+  .geo-kbs {
+    max-width: 420px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 720px) {
+  .geo-card-head {
+    flex-wrap: wrap;
+  }
+
+  .geo-hide-s {
+    display: none;
+  }
+  .geo-table td,
+  .geo-table th {
+    padding: 8px;
+  }
+  .geo-name {
+    white-space: normal;
+  }
+  .geo-col-occ {
+    min-width: 110px;
+  }
+
+  .geo-demo-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .geo-demo-surge {
+    grid-column: span 2;
   }
 }

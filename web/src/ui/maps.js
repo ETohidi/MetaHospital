@@ -1,17 +1,19 @@
-// The three map levels of the twin: Earth (1), Germany (2) and Berlin (3).
-// d3 and topojson are globals from index.html. The projected base maps are built once per
-// level and cached; each render only redraws the live overlays (pins, rings, numbers).
+// The map levels: Country (Germany: the ministry screen on real DIVI data) and City (Berlin: real
+// DIVI header, district map with the fictional demo twins). The World level is world.js. d3 is a
+// global from index.html. The Berlin base map is built once and cached; each render only redraws
+// the live overlays. The page anatomy (head, KPI strip, badges, sources) comes from page.js and
+// the levels panel from levels.js, the same as on every other level.
+//
+// Real and simulated numbers never mix: the Germany page and the Berlin header show only the
+// DIVI-Intensivregister (Live); the demo twins are a separate, labelled block (Simulated).
 
 import berlinGeo from "../data/berlin.js";
-import germanyGeo from "../data/germany.js";
-import { BERLIN, HOSPITAL_BY_ID, HOSPITALS, OTHER_CITIES, OWN_HOSPITAL } from "../data/places.js";
-import worldTopo from "../data/world.js";
+import { BERLIN, HOSPITAL_BY_ID, HOSPITALS, OWN_HOSPITAL } from "../data/places.js";
 import { chip, confBar, esc, html, meter, pct, plural, raw, UTIL_LABEL, utilTone } from "./dom.js";
+import { levelsPanel as sharedLevelsPanel } from "./levels.js";
+import { kpiStrip, pageHead, pill, prov, PROV_HELP, PROV_LABEL, sourcesFooter as pageSources } from "./page.js";
 
-// Equal Earth is about 2.05:1, so the world viewBox is a little flatter than 16:9.
-const VIEWBOX = { 1: [960, 480], 2: [640, 760], 3: [960, 640] };
-const EARTH_KM = "12,742 km";
-const GERMANY_KM = "876 km north–south";
+const VIEWBOX = { 3: [960, 640] };
 const PULSE_MS = 2400;
 const FLOW_MS = 1200;
 const PIN_R_MAX = 14;
@@ -86,29 +88,15 @@ function emergencyChip(snap) {
   return snap.surge ? chip(`Emergency at ${OWN_HOSPITAL.short}: ${snap.surge}`, "crit") : "";
 }
 
-function worstChip(net) {
-  const h = net.worstHospital;
-  if (!h) return "";
-  return chip(`${UTIL_LABEL[h.tone]}: ${h.place?.short ?? h.name} ${h.worstUnit} ${pct(h.worst)} in use`, h.tone, {
-    title: "The fullest ICU or Ward in the network",
-  });
-}
+
 
 function stat(value, label) {
   return html`<div class="stat"><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div>`;
 }
 
-function head({ eyebrow, title, lede, chips }) {
-  return html`<div class="view-head">
-    <div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${lede}</p></div>
-    <div class="row">${chips}</div>
-  </div>`;
-}
-
-function libsReady(level) {
-  const { d3, topojson } = globalThis;
-  if (!d3 || typeof d3.geoPath !== "function") return false;
-  return level !== 1 || Boolean(topojson && typeof topojson.feature === "function");
+function libsReady() {
+  const { d3 } = globalThis;
+  return Boolean(d3 && typeof d3.geoPath === "function");
 }
 
 function geoPath(projection) {
@@ -180,62 +168,6 @@ function baseMap(level) {
   return cache.get(level);
 }
 
-function buildEarth() {
-  const { d3, topojson } = globalThis;
-  const [w, h] = VIEWBOX[1];
-  const sphere = { type: "Sphere" };
-  const projection = d3.geoEqualEarth().fitExtent(
-    [
-      [10, 10],
-      [w - 10, h - 10],
-    ],
-    sphere,
-  );
-  const path = geoPath(projection);
-  const countries = topojson.feature(worldTopo, worldTopo.objects.countries);
-  const de = countries.features.find((f) => String(f.id) === "276");
-  // Merged land plus a border mesh is about half the markup of 177 country outlines.
-  const land = topojson.feature(worldTopo, worldTopo.objects.land);
-  const borders = topojson.mesh(worldTopo, worldTopo.objects.countries, (a, b) => a !== b);
-  const graticule = d3.geoGraticule().step([20, 20]);
-  const base = `
-    <path class="map-sphere" d="${path(sphere)}"/>
-    <path class="map-graticule" fill="none" d="${path(graticule())}"/>
-    <path class="map-land" d="${path(land)}"/>
-    <path class="map-borders" fill="none" d="${path(borders)}"/>`;
-  return { base, germany: path(de), centroid: path.centroid(de), berlin: projection([BERLIN.lon, BERLIN.lat]) };
-}
-
-function buildGermany() {
-  const { d3 } = globalThis;
-  const [w, h] = VIEWBOX[2];
-  const projection = d3.geoMercator().fitExtent(
-    [
-      [24, 24],
-      [w - 24, h - 24],
-    ],
-    germanyGeo,
-  );
-  const path = geoPath(projection);
-  const be = germanyGeo.features.find((f) => f.properties.id === "DE-BE");
-  const states = germanyGeo.features
-    .filter((f) => f !== be)
-    .map((f) => `<path class="map-state" d="${path(f)}"><title>${esc(f.properties.name)}</title></path>`)
-    .join("");
-  const cities = OTHER_CITIES.map((c) => {
-    const [x, y] = projection([c.lon, c.lat]);
-    return `<g class="map-city"><title>${esc(c.name)}: not connected yet</title>
-      <circle class="map-city-dot" cx="${f1(x)}" cy="${f1(y)}" r="3.5"/>
-      <text class="map-city-label" x="${f1(x + 7)}" y="${f1(y)}" dy="0.35em">${esc(c.name)}</text></g>`;
-  }).join("");
-  const bar = kmToUnits(projection, 10.45, 51.2, 100);
-  const base = `
-    <rect class="map-water" x="0" y="0" width="${w}" height="${h}"/>
-    ${states}
-    ${cities}
-    ${scaleBar(24, h - 24, bar, "100 km")}`;
-  return { base, berlinState: path(be), berlin: projection([BERLIN.lon, BERLIN.lat]) };
-}
 
 function buildBerlin() {
   const { d3 } = globalThis;
@@ -377,7 +309,7 @@ function buildBerlin() {
   return { base, pins, links, districts };
 }
 
-const BUILDERS = { 1: buildEarth, 2: buildGermany, 3: buildBerlin };
+const BUILDERS = { 3: buildBerlin };
 
 // -- the map cards ----------------------------------------------------------------------------
 function missingCard() {
@@ -388,7 +320,7 @@ function missingCard() {
 
 function svg(level, label, content) {
   const [w, h] = VIEWBOX[level];
-  const cls = { 1: "earth", 2: "germany", 3: "berlin" }[level];
+  const cls = { 3: "berlin" }[level];
   return html`<svg class="map-svg map-svg-${cls}" viewBox="0 0 ${w} ${h}" role="group" aria-label="${label}">${content}</svg>`;
 }
 
@@ -401,69 +333,6 @@ function svgText(cls, x, y, anchor, spans) {
   return html`<text class="${cls}" text-anchor="${anchor}" x="${tx}" y="${f1(y)}">${inner}</text>`;
 }
 
-function earthMap(snap, net, ctx) {
-  const m = baseMap(1);
-  const [bx, by] = m.berlin;
-  const [cx, cy] = m.centroid;
-  const overlay = html`
-    <g class="map-hit" data-go="${ctx.routes.germany}" role="link" tabindex="0" data-focus-key="earth-germany"
-      aria-label="Germany, ${net.count} hospitals in Berlin. Zoom in.">
-      <title>Germany: zoom in</title>
-      <circle class="map-hit-area" cx="${f1(cx)}" cy="${f1(cy)}" r="34"/>
-      <circle class="map-focus" cx="${f1(cx)}" cy="${f1(cy)}" r="26"/>
-      <circle class="map-target-ring" cx="${f1(cx)}" cy="${f1(cy)}" r="19"/>
-      <path class="map-de" d="${m.germany}"/>
-      <circle class="map-pulse${snap.surge ? " is-crit" : ""}" cx="${f1(bx)}" cy="${f1(by)}" r="6" style="${phase(PULSE_MS)}"/>
-      <circle class="map-marker" cx="${f1(bx)}" cy="${f1(by)}" r="3"/>
-      ${svgText("map-label", bx + 30, by, "start", [
-        { cls: "map-label-name", dy: "-0.15em", text: "Germany" },
-        { cls: "map-label-detail", dy: "1.3em", text: `${plural(net.count, "hospital")} in Berlin` },
-      ])}
-    </g>`;
-  return html`<div class="card card-flush map-card map-card-earth">
-    ${svg(1, "World map. Germany is highlighted; select it to zoom in.", html`${raw(m.base)}${overlay}`)}
-    <div class="map-foot">
-      <div class="legend">
-        <span><i class="swatch map-sw-active"></i>Connected: Germany</span>
-        <span><i class="swatch map-sw-ring"></i>Berlin, where the ${plural(net.count, "hospital")} are</span>
-      </div>
-      <span class="faint">Select Germany to zoom in.</span>
-    </div>
-  </div>`;
-}
-
-function germanyMap(snap, net, ctx) {
-  const m = baseMap(2);
-  const [bx, by] = m.berlin;
-  const lx = bx - 38;
-  const overlay = html`
-    <g class="map-hit" data-go="${ctx.routes.berlin}" role="link" tabindex="0" data-focus-key="germany-berlin"
-      aria-label="Berlin, ${net.count} hospitals: ICU ${net.freeICU} free, Ward ${net.freeWard} free. Open Berlin.">
-      <title>Berlin: open the city map</title>
-      <circle class="map-hit-area" cx="${f1(bx)}" cy="${f1(by)}" r="40"/>
-      <path class="map-be" d="${m.berlinState}"/>
-      ${snap.surge ? html`<circle class="map-pulse is-crit" cx="${f1(bx)}" cy="${f1(by)}" r="22" style="${phase(PULSE_MS)}"/>` : ""}
-      <circle class="map-ring is-${net.worstTone}" cx="${f1(bx)}" cy="${f1(by)}" r="27"/>
-      <circle class="map-focus" cx="${f1(bx)}" cy="${f1(by)}" r="33"/>
-      <circle class="map-marker" cx="${f1(bx)}" cy="${f1(by)}" r="3.5"/>
-      ${svgText("map-label map-label-berlin", lx, by, "end", [
-        { cls: "map-label-name", dy: "-0.4em", text: "Berlin" },
-        { cls: "map-label-detail", dy: "1.35em", text: plural(net.count, "hospital") },
-        { cls: "map-label-detail", dy: "1.25em", text: `ICU ${net.freeICU} free · Ward ${net.freeWard} free` },
-      ])}
-    </g>`;
-  return html`<div class="card card-flush map-card map-card-germany">
-    ${svg(2, "Map of Germany's 16 states. Berlin is highlighted; select it to open the city map.", html`${raw(m.base)}${overlay}`)}
-    <div class="map-foot">
-      <div class="legend">
-        <span><i class="swatch map-sw-active"></i>Connected: Berlin</span>
-        <span><i class="swatch map-sw-city"></i>Not connected yet</span>
-        <span><i class="swatch map-sw-ring-tone is-${net.worstTone}"></i>Ring: fullest ICU or Ward in the network</span>
-      </div>
-      <span class="faint">Select Berlin to zoom in.</span>
-    </div>
-  </div>`;
-}
 
 function berlinMap(snap, net, ctx) {
   const m = baseMap(3);
@@ -507,99 +376,22 @@ function berlinMap(snap, net, ctx) {
   });
 
   return html`<div class="card card-flush map-card map-card-berlin">
-    ${svg(3, "Map of Berlin's 12 districts with the network's hospitals. Select a hospital to open it.", html`${raw(m.base)}${links}${pins}`)}
+    ${svg(3, "Map of Berlin's 12 districts with the three fictional demo twins. Select a twin to open it.", html`${raw(m.base)}${links}${pins}`)}
     <div class="map-foot">
       <div class="legend">
+        <span>${badge("simulated", "Demo twins")}</span>
         <span><i class="swatch map-sw-tone is-ok"></i>Up to 85% in use</span>
         <span><i class="swatch map-sw-tone is-warn"></i>85–95%</span>
         <span><i class="swatch map-sw-tone is-crit"></i>Over 95%</span>
         <span><i class="swatch map-sw-own"></i>Ours</span>
         <span><i class="swatch map-sw-link"></i>Latest capacity report</span>
       </div>
-      <span class="faint">Pin size: total beds. Colour: the fuller of ICU and Ward.</span>
+      <span class="faint">Fictional hospitals, simulated. Pin size: total beds. Colour: the fuller of ICU and Ward.</span>
     </div>
   </div>`;
 }
 
-const MAPS = { 1: earthMap, 2: germanyMap, 3: berlinMap };
 
-// -- panels ------------------------------------------------------------------------------------
-function earthPanel(snap, net, ctx) {
-  const own = net.hospitals.find((h) => h.isOwn);
-  const levels = [
-    { n: 1, name: "Earth", scale: EARTH_KM, shows: "Where the network is.", token: ctx.routes.earth },
-    { n: 2, name: "Germany", scale: GERMANY_KM, shows: "Which regions are connected.", token: ctx.routes.germany },
-    {
-      n: 3,
-      name: "Berlin",
-      scale: `${BERLIN.areaKm2} km²`,
-      shows: "Every hospital's free beds and what it can accept.",
-      token: ctx.routes.berlin,
-    },
-    {
-      n: 4,
-      name: "Hospital",
-      scale: `${own ? own.beds : 0} beds`,
-      shows: "The bed board, the plan for the next hour and the team conversation.",
-      token: ctx.routes.hospital(OWN_HOSPITAL.id),
-    },
-    {
-      n: 5,
-      name: "Unit",
-      scale: `${snap.units.ICU.bedsTotal} beds`,
-      shows: "Occupancy over the day, the queue and every patient.",
-      token: ctx.routes.unit("ICU"),
-    },
-  ];
-  return html`
-    <div class="card map-summary">
-      <div><div class="eyebrow">The network</div><h3>${plural(net.count, "hospital")} in Berlin</h3></div>
-      <div class="map-stats">
-        ${stat(net.beds, "beds in total")}
-        ${stat(net.inUse, "in use now")}
-        ${stat(net.freeICU, "ICU beds free")}
-        ${stat(net.freeWard, "Ward beds free")}
-      </div>
-      ${snap.surge ? html`<div class="row">${emergencyChip(snap)}</div>` : ""}
-      <div class="row">
-        <a class="btn btn-primary" href="#${ctx.routes.germany}" data-focus-key="earth-zoom">Zoom to Germany</a>
-      </div>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Five levels, one twin</div>
-      <ol class="map-levels">
-        ${levels.map(
-          (l) => html`<li>
-            <a href="#${l.token}"${l.n === 1 ? raw(' aria-current="page"') : ""} data-focus-key="level-${l.n}">
-              <span class="map-lvl-num">${l.n}</span>
-              <span class="map-lvl-title"><span>${l.name}</span><span class="map-lvl-scale">${l.scale}</span></span>
-              <span class="map-lvl-shows">${l.shows}</span>
-            </a>
-          </li>`,
-        )}
-      </ol>
-    </div>`;
-}
-
-function germanyPanel(snap, net, ctx) {
-  return html`
-    <div class="card map-summary">
-      <div><div class="eyebrow">Connected region</div><h3>Berlin</h3></div>
-      <p class="muted">${plural(net.count, "hospital")} report their free beds to the Regional coordinator every hour.</p>
-      <div class="map-stats">${stat(net.freeICU, "ICU beds free")} ${stat(net.freeWard, "Ward beds free")}</div>
-      <div class="row">${worstChip(net)} ${emergencyChip(snap)}</div>
-      <div class="row">
-        <a class="btn btn-primary" href="#${ctx.routes.berlin}" data-focus-key="germany-open">Open Berlin</a>
-      </div>
-    </div>
-    <div class="card">
-      <div class="eyebrow">Not connected yet</div>
-      <ul class="map-cities">
-        ${OTHER_CITIES.map((c) => html`<li><span class="map-city-mark" aria-hidden="true"></span>${c.name}</li>`)}
-      </ul>
-      <p class="faint map-note">Shown for orientation only. No hospital there sends data to the twin.</p>
-    </div>`;
-}
 
 function reportBlock(report) {
   if (!report) return html`<div class="map-report"><span class="muted">No capacity report yet.</span></div>`;
@@ -627,7 +419,7 @@ function hospitalCard(h, snap, ctx) {
         <h3>${h.name}</h3>
         <div class="faint">${place.district ?? ""}</div>
       </div>
-      ${h.isOwn ? chip("ours", "accent", { plain: true }) : ""}
+      <span class="row">${badge("simulated", "Demo twin")} ${h.isOwn ? chip("ours", "accent", { plain: true }) : ""}</span>
     </div>
     <div class="map-free">
       ${stat(h.freeICU, "ICU beds free")} ${stat(h.freeWard, "Ward beds free")}
@@ -673,36 +465,863 @@ function berlinPanel(snap, net, ctx) {
   return html`${ordered.map((h) => hospitalCard(h, snap, ctx))}${regionalNote(snap)}`;
 }
 
-// -- heads --------------------------------------------------------------------------------------
-function headFor(level, snap, net) {
-  if (level === 2) {
-    return head({
-      eyebrow: "Level 2 of 5 · Germany",
-      title: "Which regions are connected",
-      lede: "Berlin is the only region in the network so far. Select it to see its hospitals.",
-      chips: html`${chip("1 region connected", "accent")}
-      ${chip(`${OTHER_CITIES.length} cities not connected yet`, "", { plain: true })} ${worstChip(net)} ${emergencyChip(snap)}`,
-    });
+
+
+// =====================================================================================================
+// Real data: the DIVI-Intensivregister daily report (adults), per Land, as loaded by main.js.
+// =====================================================================================================
+// DIVI numbers the Länder 01..16 in this order.
+const LAND_CODES = ["SH", "HH", "NI", "HB", "NW", "HE", "RP", "BW", "BY", "SL", "BE", "BB", "MV", "SN", "ST", "TH"];
+const LAND_NAME = {
+  SH: "Schleswig-Holstein",
+  HH: "Hamburg",
+  NI: "Niedersachsen",
+  HB: "Bremen",
+  NW: "Nordrhein-Westfalen",
+  HE: "Hessen",
+  RP: "Rheinland-Pfalz",
+  BW: "Baden-Württemberg",
+  BY: "Bayern",
+  SL: "Saarland",
+  BE: "Berlin",
+  BB: "Brandenburg",
+  MV: "Mecklenburg-Vorpommern",
+  SN: "Sachsen",
+  ST: "Sachsen-Anhalt",
+  TH: "Thüringen",
+};
+// The five Kleeblatt clusters the Länder use to move ICU patients between each other.
+const KLEEBLATT = {
+  Nord: ["SH", "HH", "NI", "HB", "MV"],
+  Ost: ["BE", "BB", "SN", "ST", "TH"],
+  Süd: ["BY"],
+  Südwest: ["BW", "HE", "RP", "SL"],
+  West: ["NW"],
+};
+const CLUSTER_OF = Object.fromEntries(Object.entries(KLEEBLATT).flatMap(([k, codes]) => codes.map((c) => [c, k])));
+// Equal-area tile grid, [column, row]: every Land gets the same tile, so Bremen counts as much as Bayern.
+const TILE_POS = {
+  SH: [2, 0],
+  HB: [1, 1],
+  HH: [2, 1],
+  MV: [3, 1],
+  NW: [0, 2],
+  NI: [1, 2],
+  ST: [2, 2],
+  BE: [3, 2],
+  BB: [4, 2],
+  RP: [0, 3],
+  HE: [1, 3],
+  TH: [2, 3],
+  SN: [3, 3],
+  SL: [0, 4],
+  BW: [1, 4],
+  BY: [2, 4],
+};
+const TILE = 80;
+/** Alert only when a Land is at least this full AND has fewer free beds, for this many days in a row. */
+export const ALERT_RULE = { pct: 90, free: 10, days: 3 };
+const WATCH_PCT = 85;
+const STALE_DAYS = 2;
+const SPARK_DAYS = 28;
+
+const DIVI = {
+  name: "DIVI-Intensivregister",
+  publisher: "Robert Koch-Institut",
+  url: "https://github.com/robert-koch-institut/Intensivkapazitaeten_und_COVID-19-Intensivbettenbelegung_in_Deutschland",
+  licence: "CC BY 4.0",
+};
+const DIVI_SITES_URL = "https://www.intensivregister.de";
+
+// Annual reference values (Official): cited, not fetched. Shown only as context next to the live figures.
+const CONTEXT_DE = [
+  { label: "Hospitals", value: "1,840", note: "on 2,755 sites" },
+  { label: "Hospital beds", value: "473,606" },
+];
+const DESTATIS = {
+  name: "Destatis Krankenhausverzeichnis 2024",
+  url: "https://www.statistikportal.de/de/veroeffentlichungen/krankenhausverzeichnis",
+  licence: "dl-de/by-2.0",
+  year: 2024,
+};
+const WB_BEDS = {
+  value: "7.55",
+  year: 2023,
+  name: "World Bank SH.MED.BEDS.ZS",
+  url: "https://data.worldbank.org/indicator/SH.MED.BEDS.ZS?locations=DE",
+  licence: "CC BY 4.0",
+};
+const BERLIN_PLAN = {
+  value: "23,620",
+  sites: 64,
+  name: "Berlin hospital register (plan hospitals)",
+  url: "https://gdi.berlin.de/services/wfs/krankenhaeuser",
+  licence: "dl-de/zero-2.0",
+};
+const BERLIN_STAT = {
+  value: "20,119",
+  hospitals: 85,
+  year: 2024,
+  name: "Amt für Statistik Berlin-Brandenburg, Krankenhäuser 2024",
+  url: "https://download.statistik-berlin-brandenburg.de/0c8e593e02222e3b/ab037c6d31e5/SB_A04-02-00_2024j01_BE.pdf",
+  licence: "CC BY 3.0 DE",
+};
+
+// -- tolerant reading of the data file -------------------------------------------------------------
+// Values may be plain numbers or provenance records {value, kind, source, url, licence, asOf}.
+function unwrap(x) {
+  if (x && typeof x === "object" && !Array.isArray(x)) return x.value ?? x.v ?? null;
+  return x;
+}
+function val(x) {
+  const v = unwrap(x);
+  if (v === null || v === undefined || v === "" || v === "NA") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function pick(o, ...keys) {
+  for (const k of keys) {
+    let v = o;
+    for (const part of k.split(".")) v = v?.[part];
+    if (v !== undefined && v !== null) return v;
   }
-  if (level === 3) {
-    return head({
-      eyebrow: "Level 3 of 5 · Berlin",
-      title: "Free beds across Berlin",
-      lede: "Each pin is a hospital, sized by its beds and coloured by how full its ICU or Ward is. The dashed lines show what each neighbour told the Regional coordinator it can accept. Select a hospital to open it.",
-      chips: html`${chip(`ICU ${net.freeICU} free`, net.icuTone)} ${chip(`Ward ${net.freeWard} free`, net.wardTone)}
-      ${worstChip(net)} ${emergencyChip(snap)}`,
-    });
+  return undefined;
+}
+const num = (o, ...keys) => val(pick(o, ...keys));
+
+function landCode(r, key) {
+  for (const c0 of [pick(r, "code", "ab", "abbr", "short", "iso", "id", "bundesland_id", "landId"), key]) {
+    if (c0 === undefined || c0 === null) continue;
+    const c = String(c0).replace(/^DE-/i, "").toUpperCase();
+    if (LAND_NAME[c]) return c;
+    const n = Number(c);
+    if (Number.isInteger(n) && n >= 1 && n <= 16) return LAND_CODES[n - 1];
   }
-  return head({
-    eyebrow: "Level 1 of 5 · Earth",
-    title: "Where the network is",
-    lede: `A digital twin of ${plural(net.count, "hospital")} in Berlin, simulated hour by hour, from the whole planet down to a single bed. Select Germany to zoom in.`,
-    chips: html`${chip(plural(net.count, "hospital"), "accent")} ${chip(`ICU ${net.freeICU} free`, net.icuTone)} ${emergencyChip(snap)}`,
+  const name = pick(r, "name", "bundesland_name", "land");
+  return Object.keys(LAND_NAME).find((k) => LAND_NAME[k] === name) ?? null;
+}
+
+function figures(r) {
+  if (!r) return {};
+  return {
+    areas: num(r, "areas", "reportingAreas", "reporting_areas", "anzahl_meldebereiche"),
+    occupied: num(r, "occupied", "occ", "icuOccupied", "intensivbetten_belegt"),
+    free: num(r, "free", "icuFree", "intensivbetten_frei"),
+    reserve: num(r, "reserve", "reserve7d", "emergencyReserve", "intensivbetten_7_tage_notfallreserve"),
+    vent: num(
+      r,
+      "ventFree",
+      "vent",
+      "invasiveVentilationFree",
+      "freeInvasiveVentilation",
+      "kapazitaeten_frei_invasive_beatmung_gesamt",
+    ),
+    regular: num(r, "status.regular", "operating.regular", "regular", "betriebssituation_regulaerer_betrieb"),
+    partly: num(r, "status.partly", "status.partial", "operating.partly", "partly", "betriebssituation_teilweise_eingeschraenkt"),
+    limited: num(r, "status.limited", "operating.limited", "limited", "betriebssituation_eingeschraenkt"),
+    noStatement: num(
+      r,
+      "status.noStatement",
+      "status.none",
+      "operating.noStatement",
+      "noStatement",
+      "betriebssituation_keine_angabe",
+    ),
+    staff: num(r, "limits.staff", "limitations.staff", "staffLimited", "staff", "einschraenkung_personal"),
+  };
+}
+
+const occPct = (f) => (f.occupied != null && f.free != null && f.occupied + f.free > 0 ? (100 * f.occupied) / (f.occupied + f.free) : null);
+
+function seriesOf(r) {
+  let s = pick(r, "series", "history", "days", "daily");
+  if (!s) return [];
+  if (!Array.isArray(s) && Array.isArray(s.dates)) {
+    s = s.dates.map((date, i) => ({ date, occupied: s.occupied?.[i], free: s.free?.[i], pct: s.pct?.[i] }));
+  }
+  if (!Array.isArray(s)) return [];
+  const out = s.map((e) => {
+    let d;
+    if (Array.isArray(e)) d = { date: e[0], occupied: val(e[1]), free: val(e[2]) };
+    else if (e && typeof e === "object") {
+      d = {
+        date: pick(e, "date", "datum", "day"),
+        occupied: num(e, "occupied", "occ", "intensivbetten_belegt"),
+        free: num(e, "free", "intensivbetten_frei"),
+        raw: num(e, "pct", "occupancy"),
+      };
+    } else d = { raw: val(e) };
+    const p = occPct(d);
+    d.pct = p ?? (d.raw == null ? null : d.raw <= 1 ? d.raw * 100 : d.raw);
+    return d;
+  });
+  if (out.every((d) => d.date)) out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  return out;
+}
+
+const dayNum = (iso) => Math.floor(Date.parse(`${String(iso).slice(0, 10)}T12:00:00Z`) / 864e5);
+
+/** Normalise realData().de into {asOf, source, laender[16], total}. Throws when the shape is unusable. */
+export function normalizeDE(raw) {
+  if (!raw || typeof raw !== "object") throw new Error("no data");
+  let list = pick(raw, "laender", "länder", "lands", "states", "regions", "bundeslaender");
+  if (list && !Array.isArray(list)) list = Object.entries(list).map(([key, v]) => ({ ...v, __key: key }));
+  if (!Array.isArray(list) || !list.length) throw new Error("no Länder in the data");
+
+  let asOf = pick(raw, "asOf", "date", "reportDate", "meta.asOf", "provenance.asOf", "source.asOf");
+  const laender = [];
+  for (const r of list) {
+    const code = landCode(r, r.__key);
+    if (!code) continue;
+    const latest = figures(pick(r, "latest", "today", "current") ?? r);
+    const series = seriesOf(r).slice(-60);
+    const last = series[series.length - 1];
+    if (latest.occupied == null && last) Object.assign(latest, { occupied: last.occupied, free: last.free });
+    asOf ??= pick(r, "asOf", "occupied.asOf", "latest.asOf") ?? last?.date;
+    laender.push({ code, name: LAND_NAME[code], cluster: CLUSTER_OF[code], ...latest, series });
+  }
+  if (!laender.length || laender.every((l) => l.occupied == null)) throw new Error("no ICU figures in the data");
+  asOf = asOf ? String(unwrap(asOf)).slice(0, 10) : null;
+  // Make sure the latest day closes every series (the alert rule and the sparkline read it).
+  for (const l of laender) {
+    const last = l.series[l.series.length - 1];
+    if (asOf && l.occupied != null && (!last || (last.date && last.date < asOf))) {
+      l.series.push({ date: asOf, occupied: l.occupied, free: l.free, pct: occPct(l) });
+    }
+    l.pct = occPct(l);
+    l.streak = alertStreak(l.series);
+  }
+  const order = Object.keys(LAND_NAME);
+  laender.sort((a, b) => order.indexOf(a.code) - order.indexOf(b.code));
+
+  const summed = sumFigures(laender);
+  const given = figures(pick(raw, "national", "germany", "total", "de", "DE"));
+  const total = Object.fromEntries(Object.entries(summed).map(([k, v]) => [k, given[k] ?? v]));
+  const nationalSeries = seriesOf(pick(raw, "national", "germany", "total") ?? {});
+  total.series = nationalSeries.length ? nationalSeries : sumSeries(laender);
+  total.pct = occPct(total);
+  const src = pick(raw, "source", "provenance", "meta") ?? {};
+  const source = {
+    name: typeof src === "string" ? src : src.name ?? src.source ?? DIVI.name,
+    url: src.url ?? pick(raw, "url") ?? DIVI.url,
+    licence: src.licence ?? src.license ?? pick(raw, "licence", "license") ?? DIVI.licence,
+  };
+  return { asOf, source, laender, total, generatedAt: pick(raw, "generatedAt", "meta.generatedAt") ?? null };
+}
+
+function sumFigures(rows) {
+  const keys = ["areas", "occupied", "free", "reserve", "vent", "regular", "partly", "limited", "noStatement", "staff"];
+  return Object.fromEntries(
+    keys.map((k) => [k, rows.some((r) => r[k] == null) ? null : rows.reduce((n, r) => n + r[k], 0)]),
+  );
+}
+
+/** National series = the sum over Länder, on days every Land reported. */
+function sumSeries(laender) {
+  const byDate = new Map();
+  for (const l of laender) {
+    for (const d of l.series) {
+      if (!d.date || d.occupied == null || d.free == null) continue;
+      const e = byDate.get(d.date) ?? { date: d.date, occupied: 0, free: 0, n: 0 };
+      e.occupied += d.occupied;
+      e.free += d.free;
+      e.n += 1;
+      byDate.set(d.date, e);
+    }
+  }
+  return [...byDate.values()]
+    .filter((e) => e.n === laender.length)
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .map((e) => ({ ...e, pct: occPct(e) }));
+}
+
+/** Consecutive latest days on which the Land met the alert rule (≥90% occupied AND <10 free). */
+export function alertStreak(series) {
+  let n = 0;
+  for (let i = series.length - 1; i >= 0; i--) {
+    const d = series[i];
+    if (d.pct == null || d.free == null || d.pct < ALERT_RULE.pct || d.free >= ALERT_RULE.free) break;
+    n += 1;
+    const prev = series[i - 1];
+    if (prev?.date && d.date && dayNum(d.date) - dayNum(prev.date) !== 1) break;
+  }
+  return n;
+}
+
+/** Status of a Land: crit = alert rule held for 3 days; warn = ≥85% or under 10 free today. */
+export function landStatus(l) {
+  if (l.streak >= ALERT_RULE.days) return { tone: "crit", label: "Alert" };
+  if ((l.pct != null && l.pct >= WATCH_PCT) || (l.free != null && l.free < ALERT_RULE.free)) {
+    return { tone: "warn", label: "Watch" };
+  }
+  return { tone: "ok", label: "Normal" };
+}
+
+/**
+ * Reads the DIVI data from the context: ctx.data.de (main.js, with ctx.dataState) or ctx.realData().de.
+ * Returns {state: "ready"|"loading"|"failed", de?, error?}.
+ */
+function realDE(ctx) {
+  let real = ctx.realData ?? ctx.data;
+  if (typeof real === "function") {
+    try {
+      real = real();
+    } catch (e) {
+      return { state: "failed", error: e.message };
+    }
+  }
+  const declared = ctx.dataState ?? real?.state ?? null;
+  if (!("realData" in ctx) && !("data" in ctx)) return { state: "failed", error: "This build does not load real data." };
+  const err = real?.errors?.de ?? null;
+  let raw = real?.de ?? real?.DE ?? real?.germany ?? real?.divi ?? null;
+  if (raw && !pick(raw, "laender", "länder", "lands", "states", "regions", "bundeslaender")) {
+    raw = pick(raw, "icu", "icuDaily", "icu_daily", "daily") ?? raw;
+  }
+  if (raw == null || raw === false) {
+    if (declared === "loading" || (declared == null && real == null && !err)) return { state: "loading" };
+    return { state: "failed", error: err ? String(err.message ?? err) : "The DIVI file is missing from the loaded data." };
+  }
+  if (raw instanceof Error || raw.error) return { state: "failed", error: String(raw.message ?? raw.error) };
+  try {
+    return { state: "ready", de: normalizeDE(raw) };
+  } catch (e) {
+    return { state: "failed", error: `The data file has an unexpected shape (${e.message}).` };
+  }
+}
+
+// -- formatting -----------------------------------------------------------------------------------
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmt = (n) => (n == null ? "–" : Math.round(n).toLocaleString("en-US"));
+const fmtPct = (p, d = 1) => (p == null ? "–" : `${p.toFixed(d)}%`);
+function fmtDate(iso) {
+  if (!iso) return "date unknown";
+  const [y, m, d] = String(iso).slice(0, 10).split("-").map(Number);
+  return `${d} ${MONTHS[m - 1]} ${y}`;
+}
+function ageDays(iso) {
+  if (!iso) return null;
+  return Math.floor(Date.now() / 864e5) - dayNum(iso);
+}
+const seqStep = (p) => (p == null ? 0 : p >= 90 ? 5 : p >= 85 ? 4 : p >= 80 ? 3 : p >= 75 ? 2 : 1);
+
+// =====================================================================================================
+// Shared page pieces for the map levels: head, provenance badge, KPI strip, sources footer, ladder.
+// =====================================================================================================
+/** Provenance badge (page.js): live | official | estimated | simulated | illustrative | notshown | unknown | stale. */
+export function badge(kind, text = PROV_LABEL[kind], title = PROV_HELP[kind]) {
+  return prov(kind, { label: text, title });
+}
+
+function liveBadge(asOf) {
+  const age = ageDays(asOf);
+  if (age != null && age > STALE_DAYS) return badge("stale", `Live · ${fmtDate(asOf)}`, `Real data from ${fmtDate(asOf)}, older than ${STALE_DAYS} days`);
+  return badge("live", "Live", `${PROV_HELP.live}: DIVI-Intensivregister, report of ${fmtDate(asOf)}`);
+}
+
+function statusPill(tone, label, title = "") {
+  return pill(label, tone, { title });
+}
+
+/** Freshness for the page head: {badge, text}. */
+function freshness(state, asOf) {
+  if (state === "ready") return { badge: liveBadge(asOf), text: `DIVI daily report · ${fmtDate(asOf)}` };
+  if (state === "loading") return { badge: badge("unknown", "Loading"), text: "DIVI daily report" };
+  return { badge: badge("unknown"), text: "DIVI daily report not loaded" };
+}
+
+/** 28-day occupancy sparkline. Fixed 60-100% scale in tables so rows compare; auto-scaled in KPI tiles. */
+function sparkline(series, { w = 84, h = 22, lo = 60, hi = 100, auto = false, cls = "geo-spark", ref = 85 } = {}) {
+  const pts = series.slice(-SPARK_DAYS).filter((d) => d.pct != null);
+  if (pts.length < 2) return html`<span class="geo-spark-none">–</span>`;
+  if (auto) {
+    const ps = pts.map((d) => d.pct);
+    lo = Math.floor(Math.min(...ps) - 1);
+    hi = Math.ceil(Math.max(...ps) + 1);
+  }
+  const x = (i) => (i / (pts.length - 1)) * (w - 4) + 2;
+  const y = (v) => h - 2 - ((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo || 1)) * (h - 4);
+  const line = pts.map((d, i) => `${x(i).toFixed(1)},${y(d.pct).toFixed(1)}`).join(" ");
+  const last = pts[pts.length - 1];
+  const refLine = ref > lo && ref < hi ? html`<line class="geo-spark-ref" x1="0" x2="${w}" y1="${y(ref).toFixed(1)}" y2="${y(ref).toFixed(1)}"/>` : "";
+  const label = `Occupancy over the last ${pts.length} days, from ${fmtPct(pts[0].pct)} to ${fmtPct(last.pct)}`;
+  return html`<svg class="${cls}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="${label}">
+    <title>${label}</title>${refLine}
+    <polyline class="geo-spark-line" points="${line}" vector-effect="non-scaling-stroke"/>
+    <circle class="geo-spark-dot" cx="${x(pts.length - 1).toFixed(1)}" cy="${y(last.pct).toFixed(1)}" r="2.2"/>
+  </svg>`;
+}
+
+/** Occupancy bar with thin ticks at 85% and 90%. */
+function occBar(p, label) {
+  const w = p == null ? 0 : Math.max(0, Math.min(100, p));
+  return html`<div class="geo-pct">
+    <div class="geo-bar" role="img" aria-label="${label}: ${fmtPct(p)} occupied">
+      <i class="is-s${seqStep(p)}" style="width:${w.toFixed(1)}%"></i><b style="left:85%"></b><b style="left:90%"></b>
+    </div>
+    <span>${fmtPct(p)}</span>
+  </div>`;
+}
+
+/** Areas that answered = all reporting areas minus those that gave no operating status. */
+function staffFigures(f) {
+  const answered = f.areas != null && f.noStatement != null ? f.areas - f.noStatement : null;
+  const share = answered && f.staff != null ? (100 * f.staff) / answered : null;
+  return { answered, share };
+}
+
+function staffSegments(f) {
+  const { answered } = staffFigures(f);
+  if (answered == null || f.staff == null || !f.areas) return "";
+  const seg = (n) => ((100 * n) / f.areas).toFixed(2);
+  const ok = answered - f.staff;
+  const label = `${f.staff} staff-limited, ${ok} answered without a staff limit, ${f.noStatement} no statement, of ${f.areas} reporting areas`;
+  return html`<div class="geo-segs" role="img" aria-label="${label}" title="${label}">
+    <i class="is-staff" style="width:${seg(f.staff)}%"></i><i class="is-ok" style="width:${seg(ok)}%"></i><i class="is-none" style="width:${seg(f.noStatement)}%"></i>
+  </div>
+  <div class="geo-segs-key"><span><i class="is-staff"></i>Staff-limited</span><span><i class="is-ok"></i>Not staff-limited</span><span><i class="is-none"></i>No statement ${fmt(f.noStatement)}</span></div>`;
+}
+
+const KPI_LABELS = [
+  "Adult ICU occupancy",
+  "Free ICU beds",
+  "7-day emergency reserve",
+  "Free invasive ventilation",
+  "Areas limited by staff",
+];
+
+/** The five KPI slots for an ICU level (Country, City), from one DIVI figure set. */
+function icuKpis(f, series, asOf, { alert = false } = {}) {
+  const live = liveBadge(asOf);
+  const operable = f.occupied != null && f.free != null ? f.occupied + f.free : null;
+  const { answered, share } = staffFigures(f);
+  const pcts = series.slice(-SPARK_DAYS).map((d) => d.pct).filter((p) => p != null);
+  return kpiStrip([
+    {
+      label: KPI_LABELS[0],
+      value: fmtPct(f.pct ?? occPct(f)).replace("%", ""),
+      unit: "%",
+      detail: `${fmt(f.occupied)} of ${fmt(operable)} operable beds`,
+      spark: pcts,
+      sparkLabel: pcts.length ? `Occupancy over the last ${pcts.length} days, from ${fmtPct(pcts[0])} to ${fmtPct(pcts.at(-1))}` : "",
+      badge: live,
+      alert,
+    },
+    { label: KPI_LABELS[1], value: fmt(f.free), detail: `Operable and staffed now · ${fmt(f.areas)} reporting areas`, badge: live },
+    { label: KPI_LABELS[2], value: fmt(f.reserve), detail: "Extra beds that could open within 7 days", badge: live },
+    { label: KPI_LABELS[3], value: fmt(f.vent), detail: "Places that can take a ventilated patient now", badge: live },
+    {
+      label: KPI_LABELS[4],
+      value: fmt(f.staff),
+      unit: answered == null ? "" : `of ${fmt(answered)} that answered`,
+      detail:
+        share == null
+          ? "Share unknown: no operating status reported"
+          : `${share.toFixed(0)}% of answering areas · ${fmt(f.noStatement)} of ${fmt(f.areas)} gave no statement`,
+      extra: staffSegments(f),
+      badge: live,
+    },
+  ]);
+}
+
+function placeholderKpis(state) {
+  const loading = state === "loading";
+  return kpiStrip(
+    KPI_LABELS.map((label) => ({
+      label,
+      value: "–",
+      detail: loading ? "Loading the DIVI daily report…" : "Not available",
+      badge: badge("unknown", loading ? "Loading" : "Unknown"),
+    })),
+    { busy: loading },
+  );
+}
+
+function stateCard(state, error) {
+  if (state === "loading") {
+    return html`<div class="geo-card geo-state" role="status"><p><b>Loading the DIVI daily report…</b></p>
+      <p class="geo-muted">The figures appear as soon as the data file has loaded.</p></div>`;
+  }
+  return html`<div class="geo-card geo-state is-failed" role="alert"><p><b>The DIVI daily report could not be loaded.</b></p>
+    <p class="geo-muted">${error || "Check your connection and reload."} Figures stay empty rather than showing 0.</p></div>`;
+}
+
+function contextStrip(items, note) {
+  return html`<div class="geo-ctx">
+    <span class="geo-ctx-k">Context ${badge("official")}</span>
+    ${items.map((i) => html`<span title="${i.title ?? ""}">${i.label} <b>${i.value}</b>${i.note ? html` <span class="geo-muted">${i.note}</span>` : ""}</span>`)}
+    <span class="geo-muted geo-ctx-note">${note}</span>
+  </div>`;
+}
+
+function link(url, text) {
+  return html`<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+}
+
+/** Sources footer (page.js) from rows {kind, badgeText?, text}. */
+function sourcesFooter(rows) {
+  return pageSources(rows.map((r) => ({ badge: badge(r.kind, r.badgeText), text: r.text })));
+}
+
+function levelsPanel(ctx, levelKey) {
+  return sharedLevelsPanel(levelKey, { place: levelKey === "country" ? "Germany" : "Berlin" });
+}
+
+// =====================================================================================================
+// Country: Germany, the ministry situation desk
+// =====================================================================================================
+function tileGrid(de) {
+  const S = TILE;
+  const tiles = de.laender.map((l) => {
+    const pos = TILE_POS[l.code];
+    if (!pos) return "";
+    const [c, r] = pos;
+    const st = landStatus(l);
+    const step = seqStep(l.pct);
+    const isLink = l.code === "BE";
+    const x = c * S;
+    const y = r * S;
+    const label = `${l.name}: ${fmtPct(l.pct)} occupied, ${fmt(l.free)} free, ${fmt(l.reserve)} reserve, ${fmt(l.areas)} reporting areas. ${st.label}.${isLink ? " Open Berlin." : ""}`;
+    return html`<g class="geo-tile is-s${step}${st.tone === "crit" ? " is-alert" : ""}${isLink ? " is-link" : ""}" data-land="${l.code}"
+      ${isLink ? raw(`data-go="berlin" role="link" tabindex="0" data-focus-key="tile-BE"`) : raw('role="img"')} aria-label="${label}">
+      <title>${label}</title>
+      <rect class="geo-tile-bg" x="${x + 4}" y="${y + 4}" width="${S - 8}" height="${S - 8}" rx="8"/>
+      ${st.tone === "crit" ? html`<rect class="geo-tile-alert" x="${x + 7}" y="${y + 7}" width="${S - 14}" height="${S - 14}" rx="6"/>` : ""}
+      <text class="geo-tile-code" x="${x + S / 2}" y="${y + 30}">${l.code}</text>
+      <text class="geo-tile-pct" x="${x + S / 2}" y="${y + 49}">${l.pct == null ? "–" : `${l.pct.toFixed(0)}%`}</text>
+      <text class="geo-tile-areas" x="${x + S / 2}" y="${y + 65}">${fmt(l.areas)} areas</text>
+    </g>`;
+  });
+  return html`<svg class="geo-tiles" viewBox="0 0 ${S * 5} ${S * 5}" role="group" aria-label="Tile grid of the 16 Länder, coloured by adult ICU occupancy">${tiles}</svg>`;
+}
+
+function rampLegend() {
+  return html`<div class="geo-legend">
+    <div><div class="geo-ramp" aria-hidden="true">${[1, 2, 3, 4, 5].map((s) => html`<i class="is-s${s}"></i>`)}</div>
+      <div class="geo-ramp-l"><span>&lt;75</span><span>80</span><span>85</span><span>90+ %</span></div></div>
+    ${statusPill("crit", "Alert", "≥90% occupied and <10 free beds for 3 days in a row")}
+  </div>`;
+}
+
+function clusterSums(de) {
+  return Object.entries(KLEEBLATT).map(([name, codes]) => {
+    const rows = de.laender.filter((l) => codes.includes(l.code));
+    const f = sumFigures(rows);
+    return { name, rows, ...f, pct: occPct(f) };
   });
 }
 
-const PANELS = { 1: earthPanel, 2: germanyPanel, 3: berlinPanel };
-const PANEL_LABEL = { 1: "The network", 2: "Connected regions", 3: "Hospitals in Berlin" };
+function clusterBars(clusters) {
+  return html`<div class="geo-kbs"><h3>Kleeblatt clusters</h3>
+    ${clusters.map(
+      (k) => html`<div class="geo-kbr"><span>${k.name}</span>
+        <div class="geo-bar" role="img" aria-label="Kleeblatt ${k.name}: ${fmtPct(k.pct, 0)} occupied"><i class="is-s${seqStep(k.pct)}" style="width:${(k.pct ?? 0).toFixed(1)}%"></i><b style="left:85%"></b><b style="left:90%"></b></div>
+        <span>${fmtPct(k.pct, 0)} · ${fmt(k.free)}</span></div>`,
+    )}
+  </div>`;
+}
+
+function landTable(clusters) {
+  const rows = clusters.map((k) => {
+    const head = html`<tr class="geo-grp"><td colspan="6">Kleeblatt ${k.name} · ${fmtPct(k.pct, 0)} · ${fmt(k.free)} free · ${fmt(k.areas)} reporting areas</td></tr>`;
+    const lands = [...k.rows].sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
+    return html`${head}${lands.map((l) => {
+      const st = landStatus(l);
+      const { answered } = staffFigures(l);
+      const isLink = l.code === "BE";
+      return html`<tr data-land="${l.code}" class="${isLink ? "is-link" : ""}"${isLink ? raw(' data-go="berlin" tabindex="0" role="link" data-focus-key="row-BE"') : ""}>
+        <td><span class="geo-name">${l.name}</span>${st.tone !== "ok" ? html` ${statusPill(st.tone, st.label, st.tone === "crit" ? `${l.streak} days in a row at ≥90% with <10 free` : "")}` : ""}
+          <span class="geo-areas">${fmt(l.areas)} reporting areas${isLink ? " · open city view" : ""}</span></td>
+        <td>${occBar(l.pct, l.name)}</td>
+        <td class="n">${fmt(l.free)}</td>
+        <td class="n geo-hide-s">${fmt(l.reserve)}</td>
+        <td class="n geo-hide-s" title="${fmt(l.noStatement)} of ${fmt(l.areas)} areas gave no statement">${fmt(l.staff)} <span class="geo-muted">/ ${fmt(answered)}</span></td>
+        <td class="geo-hide-s">${sparkline(l.series)}</td>
+      </tr>`;
+    })}`;
+  });
+  return html`<div class="geo-table-wrap"><table class="geo-table">
+    <caption class="sr-only">Adult ICU capacity per Land, grouped by Kleeblatt cluster, fullest first</caption>
+    <thead><tr><th scope="col">Land</th><th scope="col" class="geo-col-occ">ICU occupancy</th><th scope="col" class="n">Free</th>
+      <th scope="col" class="n geo-hide-s">Reserve</th><th scope="col" class="n geo-hide-s" title="Areas limited by staff / areas that answered">Staff-limited</th>
+      <th scope="col" class="geo-hide-s">28 days</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function alertsCard(de) {
+  const alerts = de.laender.filter((l) => landStatus(l).tone === "crit").sort((a, b) => b.pct - a.pct);
+  const watch = de.laender.filter((l) => landStatus(l).tone === "warn").sort((a, b) => b.pct - a.pct);
+  const clusterFree = (l) =>
+    de.laender.filter((x) => x.cluster === l.cluster && x.code !== l.code).reduce((n, x) => n + (x.free ?? 0), 0);
+  const items = [
+    ...alerts.map(
+      (l) => html`<li>
+        <div class="geo-li-top"><span class="geo-from">${l.name} · Kleeblatt ${l.cluster} · ${fmt(l.areas)} reporting areas</span>${statusPill("crit", "Alert")}</div>
+        <div class="geo-what">${fmtPct(l.pct)} occupied, ${fmt(l.free)} free ICU beds</div>
+        <div class="geo-why">At ≥90% with fewer than 10 free beds for ${l.streak >= l.series.length ? "at least " : ""}${plural(l.streak, "day")} in a row. The other Länder in Kleeblatt ${l.cluster} have ${fmt(clusterFree(l))} free beds. Suggested: ask the Kleeblatt ${l.cluster} contact point to prepare transfers.</div>
+      </li>`,
+    ),
+    ...watch.map((l) => {
+      const why =
+        l.streak > 0
+          ? `Meets the alert rule today (day ${l.streak} of ${ALERT_RULE.days}).`
+          : l.free < ALERT_RULE.free
+            ? `Under ${ALERT_RULE.free} free beds, below ${ALERT_RULE.pct}% occupied.`
+            : `At or above ${WATCH_PCT}% occupied, ${fmt(l.free)} free.`;
+      return html`<li>
+        <div class="geo-li-top"><span class="geo-from">${l.name} · Kleeblatt ${l.cluster} · ${fmt(l.areas)} reporting areas</span>${statusPill("warn", "Watch")}</div>
+        <div class="geo-what">${fmtPct(l.pct)} occupied, ${fmt(l.free)} free ICU beds</div>
+        <div class="geo-why">${why} No alert yet: small Länder swing from day to day.</div>
+      </li>`;
+    }),
+    html`<li>
+      <div class="geo-li-top"><span class="geo-from">Netherlands · national coordination centre</span>${badge("illustrative")}</div>
+      <div class="geo-what">Request: 2 adult burn-ICU beds within 24 h</div>
+      <div class="geo-why">Shared: number of patients, care level needed, time window. Not shared: who the patients are. Shows how an EU request would arrive; no real feed.</div>
+    </li>`,
+  ];
+  return html`<section class="geo-card geo-alerts" aria-labelledby="geo-alerts-title">
+    <header class="geo-card-head"><div><h2 id="geo-alerts-title">Alerts &amp; requests</h2>
+      <p>Alert when a Land is ≥${ALERT_RULE.pct}% occupied AND has &lt;${ALERT_RULE.free} free beds, ${ALERT_RULE.days} days in a row.</p></div></header>
+    ${alerts.length ? "" : html`<p class="geo-empty">No Land meets the alert rule on ${fmtDate(de.asOf)}.</p>`}
+    <ul class="geo-list">${items}</ul>
+  </section>`;
+}
+
+function perSiteCard() {
+  return html`<section class="geo-card" aria-labelledby="geo-site-title">
+    <header class="geo-card-head"><div><h2 id="geo-site-title">Per-site ICU status</h2><p>Low care, high care, ECMO per hospital site</p></div>${badge("notshown")}</header>
+    <div class="geo-body">
+      <p>Exists, not shown (licence pending). Hospitals report every site to the DIVI-Intensivregister (IfSG §13(7)), and ${link(DIVI_SITES_URL, "intensivregister.de")} publishes the status per site. It appears here once DIVI and the RKI confirm the licence.</p>
+      <p class="geo-muted">This is a licence question, not a legal lock: the federal level and the public already see this layer.</p>
+    </div>
+  </section>`;
+}
+
+const NEIGHBOURS = [
+  ["AT", "Austria", true],
+  ["BE", "Belgium", true],
+  ["LU", "Luxembourg", true],
+  ["NL", "Netherlands", false],
+  ["FR", "France", false],
+  ["CH", "Switzerland", false],
+  ["CZ", "Czechia", false],
+  ["PL", "Poland", false],
+  ["DK", "Denmark", false],
+];
+
+function neighboursCard() {
+  const group = (sari) => NEIGHBOURS.filter((n) => n[2] === sari);
+  const chips = (list) => html`<span class="geo-ccs">${list.map(([cc, name]) => html`<abbr class="geo-cc" title="${name}">${cc}</abbr>`)}</span>`;
+  return html`<section class="geo-card" aria-labelledby="geo-nb-title">
+    <header class="geo-card-head"><div><h2 id="geo-nb-title">Shared with me</h2><p>Neighbouring countries' pressure band</p></div>${badge("illustrative")}</header>
+    <ul class="geo-nbs">
+      <li>${chips(group(true))}<span>Weekly SARI feed exists (ECDC ERVISS)<small>${group(true).map((n) => n[1]).join(", ")}</small></span>
+        ${statusPill("mute", "Band in the EU step", "The feed exists; the band arrives with the EU layer")}</li>
+      <li>${chips(group(false))}<span>Not in ECDC ERVISS<small>${group(false).map((n) => n[1]).join(", ")}</small></span>${statusPill("mute", "No SARI feed")}</li>
+    </ul>
+    <div class="geo-card-foot"><span>No live cross-border ICU feed exists today. A band will compare a country only with its own past seasons, never rank countries.</span></div>
+  </section>`;
+}
+
+function sharedByMeCard(de) {
+  return html`<section class="geo-card" aria-labelledby="geo-sbm-title">
+    <header class="geo-card-head"><div><h2 id="geo-sbm-title">Shared by me</h2><p>What Germany passes on, and how often</p></div></header>
+    <div class="geo-body">
+      <dl class="geo-kv">
+        <dt>To the public: Länder ICU totals (${fmt(de.total.free)} free today)</dt><dd>Daily ${badge("live")}</dd>
+        <dt>To other Länder: Kleeblatt offers and needs via the GMLZ</dt><dd>On request ${badge("illustrative")}</dd>
+        <dt>To the EU (HSC, EWRS): alerts; ICU places requested or offered</dt><dd>Within 24 h ${badge("illustrative")}</dd>
+        <dt>To WHO: events (IHR Art. 6) and yearly SPAR; weekly indicators only in a declared emergency</dt><dd>Events, yearly ${badge("illustrative")}</dd>
+      </dl>
+      <div class="geo-never"><b>Never shared:</b> patient identities, hospital clinical details, critical-infrastructure security data.</div>
+    </div>
+  </section>`;
+}
+
+function germanySources(state, de) {
+  const date = de ? `daily report of ${fmtDate(de.asOf)}` : "daily report (not loaded)";
+  return sourcesFooter([
+    {
+      kind: state === "ready" ? "live" : "unknown",
+      badgeText: state === "ready" ? "Live" : "Unknown",
+      text: html`ICU figures: ${DIVI.name}, adults, ${date}. ${DIVI.publisher} open data, ${link(de?.source.url ?? DIVI.url, "github.com/robert-koch-institut")}, ${de?.source.licence ?? DIVI.licence}.`,
+    },
+    {
+      kind: "official",
+      text: html`Hospitals and beds: ${link(DESTATIS.url, DESTATIS.name)}, ${DESTATIS.licence}. Beds per 1,000 people: ${link(WB_BEDS.url, WB_BEDS.name)}, ${WB_BEDS.year}, ${WB_BEDS.licence}.`,
+    },
+    {
+      kind: "notshown",
+      text: html`Per-site ICU status: ${link(DIVI_SITES_URL, "intensivregister.de")}, no stated licence yet.`,
+    },
+    {
+      kind: "illustrative",
+      text: "Neighbour bands, the cross-border request and the flows to the EU and WHO show how they would work; no real feed behind them.",
+    },
+  ]);
+}
+
+function germanyPage(ctx) {
+  const { state, de, error } = realDE(ctx);
+  const clusters = de ? clusterSums(de) : null;
+  const alerts = de ? de.laender.filter((l) => landStatus(l).tone === "crit") : [];
+  const rule = `Alert: ≥${ALERT_RULE.pct}% occupied and <${ALERT_RULE.free} free beds for ${ALERT_RULE.days} days in a row`;
+  const status =
+    state !== "ready"
+      ? null
+      : alerts.length
+        ? { text: `${plural(alerts.length, "Land", "Länder")} on alert`, tone: "crit", title: rule }
+        : { text: "No Land on alert", tone: "ok", title: rule };
+  const headHtml = pageHead({
+    level: "Country",
+    place: "Germany · ministry situation desk",
+    title: "Adult intensive care capacity",
+    question: "Is there intensive care capacity where it will be needed, and which Land needs help?",
+    sees: "Länder totals by default; per-site ICU status as published by DIVI.",
+    status,
+    fresh: freshness(state, de?.asOf),
+  });
+  const ctxHtml = contextStrip(
+    [
+      ...CONTEXT_DE.map((c) => ({ ...c, title: `${DESTATIS.name}, ${DESTATIS.licence}` })),
+      { label: "Beds per 1,000 people", value: WB_BEDS.value, note: `(${WB_BEDS.year})`, title: `${WB_BEDS.name}, ${WB_BEDS.licence}` },
+    ],
+    "Destatis 2024, World Bank 2023. Annual, not live: they put the ICU numbers in proportion.",
+  );
+
+  if (state !== "ready") {
+    return html`<div class="pg geo-page geo-de">
+      ${headHtml}${placeholderKpis(state)}${ctxHtml}${stateCard(state, error)}
+      <div class="geo-grid"><div class="geo-stack">${perSiteCard()}</div><aside class="geo-rail">${neighboursCard()}</aside></div>
+      ${levelsPanel(ctx, "country")}${germanySources(state, null)}
+    </div>`;
+  }
+
+  const t = de.total;
+  return html`<div class="pg geo-page geo-de">
+    ${headHtml}
+    ${icuKpis(t, t.series, de.asOf, { alert: t.pct != null && t.pct >= ALERT_RULE.pct })}
+    ${ctxHtml}
+    <div class="geo-grid">
+      <div class="geo-stack">
+        <section class="geo-card geo-laender" aria-labelledby="geo-laender-title">
+          <header class="geo-card-head"><div><h2 id="geo-laender-title">Länder</h2>
+            <p>Grouped by Kleeblatt cluster, fullest first. Thin marks on each bar: 85% and 90% occupancy. Berlin opens its city view.</p></div>
+            ${liveBadge(de.asOf)}</header>
+          <div class="geo-two">
+            <div class="geo-mapcol">
+              ${tileGrid(de)}
+              ${rampLegend()}
+              <p class="geo-muted geo-tiles-note">Equal tiles on purpose: Bremen counts as much as Bayern when it runs full.</p>
+              ${clusterBars(clusters)}
+            </div>
+            ${landTable(clusters)}
+          </div>
+          <div class="geo-card-foot">
+            <span>Coverage: ${fmt(t.areas)} adult reporting areas reported on ${fmtDate(de.asOf)}; not every ICU reports every day.</span>
+            <span>Kleeblatt = the five clusters the Länder use to move ICU patients between each other.</span>
+          </div>
+        </section>
+        ${perSiteCard()}
+      </div>
+      <aside class="geo-rail" aria-label="Alerts and sharing">
+        ${alertsCard(de)}
+        ${sharedByMeCard(de)}
+        ${neighboursCard()}
+      </aside>
+    </div>
+    ${levelsPanel(ctx, "country")}
+    ${germanySources(state, de)}
+  </div>`;
+}
+
+// =====================================================================================================
+// City: Berlin. Real DIVI header; the fictional demo twins in their own, labelled block.
+// =====================================================================================================
+function demoBlock(snap, net) {
+  const icuBeds = sum(net.hospitals, (h) => h.units.ICU.bedsStaffed);
+  const icuUsed = sum(net.hospitals, (h) => h.units.ICU.bedsOccupied);
+  return html`<section class="geo-card geo-demo" aria-labelledby="geo-demo-title">
+    <header class="geo-card-head">
+      <div><h2 id="geo-demo-title">Demo twins (simulated)</h2>
+        <p>${plural(net.count, "fictional hospital")} run by the seeded simulation. Not part of the DIVI figures above, and never added to them.</p></div>
+      ${badge("simulated", `Simulated · seed ${snap.seed}`)}
+    </header>
+    <div class="geo-demo-stats">
+      <div><span class="geo-demo-v">${net.freeICU}</span><span class="geo-demo-l">ICU beds free</span></div>
+      <div><span class="geo-demo-v">${icuUsed}<small> / ${icuBeds}</small></span><span class="geo-demo-l">ICU beds in use</span></div>
+      <div><span class="geo-demo-v">${net.freeWard}</span><span class="geo-demo-l">Ward beds free</span></div>
+      <div><span class="geo-demo-v">${net.inUse}<small> / ${net.beds}</small></span><span class="geo-demo-l">Beds in use, all units</span></div>
+      ${snap.surge ? html`<div class="geo-demo-surge">${emergencyChip(snap)}</div>` : ""}
+    </div>
+  </section>`;
+}
+
+function berlinSources(state, de, snap) {
+  const date = de ? `daily report of ${fmtDate(de.asOf)}` : "daily report (not loaded)";
+  return sourcesFooter([
+    {
+      kind: state === "ready" ? "live" : "unknown",
+      badgeText: state === "ready" ? "Live" : "Unknown",
+      text: html`ICU figures for Berlin: ${DIVI.name}, adults, ${date}. ${DIVI.publisher} open data, ${link(de?.source.url ?? DIVI.url, "github.com/robert-koch-institut")}, ${de?.source.licence ?? DIVI.licence}.`,
+    },
+    {
+      kind: "official",
+      text: html`Planned beds: ${link(BERLIN_PLAN.url, BERLIN_PLAN.name)}, ${BERLIN_PLAN.licence}. Set-up beds: ${link(BERLIN_STAT.url, BERLIN_STAT.name)}, ${BERLIN_STAT.licence}.`,
+    },
+    {
+      kind: "simulated",
+      text: `Demo twins: three fictional hospitals and their patients, simulated with seed ${snap.seed}. Their positions on the map are illustrative.`,
+    },
+    {
+      kind: "official",
+      text: "Map: Berlin districts from Berliner Morgenpost Berlin-Geodaten (CC BY, Amt für Statistik Berlin-Brandenburg).",
+    },
+  ]);
+}
+
+function berlinPage(snap, net, ctx) {
+  const { state, de, error } = realDE(ctx);
+  const be = de?.laender.find((l) => l.code === "BE");
+  const st = be ? landStatus(be) : null;
+  const headHtml = pageHead({
+    level: "City",
+    place: "Berlin · Land and City (city-state)",
+    title: "Intensive care capacity in Berlin",
+    question: "Can Berlin's intensive care units take more patients today?",
+    sees: "Real DIVI totals for Berlin; exact counts per hospital and capability in the authority tier. The hospitals on the map are fictional demo twins, simulated separately.",
+    status: st
+      ? {
+          text: st.tone === "ok" ? "Normal" : st.label,
+          tone: st.tone,
+          title: `Alert rule: ≥${ALERT_RULE.pct}% occupied and <${ALERT_RULE.free} free for ${ALERT_RULE.days} days`,
+        }
+      : null,
+    fresh: freshness(be ? state : state === "ready" ? "failed" : state, de?.asOf),
+  });
+  const kpis = be ? icuKpis(be, be.series, de.asOf) : placeholderKpis(state === "ready" ? "failed" : state);
+  const stage = libsReady(3) ? berlinMap(snap, net, ctx) : missingCard();
+  return html`<div class="pg geo-page geo-be">
+    ${headHtml}
+    ${kpis}
+    ${be ? "" : state === "ready" ? stateCard("failed", "Berlin is missing from the data file.") : stateCard(state, error)}
+    ${contextStrip(
+      [
+        { label: "Planned beds", value: BERLIN_PLAN.value, note: `${BERLIN_PLAN.sites} plan hospitals`, title: `${BERLIN_PLAN.name}, ${BERLIN_PLAN.licence}` },
+        { label: "Set-up beds", value: BERLIN_STAT.value, note: `${BERLIN_STAT.hospitals} hospitals, ${BERLIN_STAT.year}`, title: `${BERLIN_STAT.name}, ${BERLIN_STAT.licence}` },
+      ],
+      "Planned beds are what the hospital plan allows; set-up beds are what was actually in place.",
+    )}
+    ${demoBlock(snap, net)}
+    <div class="layout map-layout">
+      <section class="stage" aria-label="Map of the demo twins">${stage}</section>
+      <aside class="panel" aria-label="Demo twins in Berlin">${berlinPanel(snap, net, ctx)}</aside>
+    </div>
+    ${levelsPanel(ctx, "city")}
+    ${berlinSources(state, de, snap)}
+  </div>`;
+}
 
 // -- focus: a re-render every simulated hour must not throw the keyboard user out ---------------
 function focusedKey(container) {
@@ -717,19 +1336,31 @@ function restoreFocus(container, key) {
   if (el) el.focus({ preventScroll: true });
 }
 
+// Linked hover on the Germany page: a tile and its table row light up together.
+function linkHover(container, on) {
+  const handler = (event) => {
+    const land = on && event.type === "mouseover" ? event.target.closest?.("[data-land]")?.dataset.land : null;
+    for (const el of container.querySelectorAll(".is-hl")) if (el.dataset.land !== land) el.classList.remove("is-hl");
+    if (land) for (const el of container.querySelectorAll(`[data-land="${land}"]`)) el.classList.add("is-hl");
+  };
+  container.onmouseover = on ? handler : null;
+  container.onmouseleave = on ? handler : null;
+}
+
+function pageOf(route) {
+  if (route.token === "germany" || route.page === "germany") return "germany";
+  if (route.token === "berlin" || route.page === "berlin") return "berlin";
+  return route.level === 3 ? "berlin" : "germany";
+}
+
 // -- entry point -----------------------------------------------------------------------------------
 export function render(container, ctx) {
-  const level = [1, 2, 3].includes(ctx.route.level) ? ctx.route.level : 1;
+  const page = pageOf(ctx.route);
   const { snap } = ctx;
   const net = networkStats(snap);
   const key = focusedKey(container);
-  const stage = libsReady(level) ? MAPS[level](snap, net, ctx) : missingCard();
-  container.innerHTML = String(html`
-    ${headFor(level, snap, net)}
-    <div class="layout map-layout">
-      <section class="stage" aria-label="Map">${stage}</section>
-      <aside class="panel" aria-label="${PANEL_LABEL[level]}">${PANELS[level](snap, net, ctx)}</aside>
-    </div>
-  `);
+  linkHover(container, page === "germany");
+  const out = page === "germany" ? germanyPage(ctx) : berlinPage(snap, net, ctx);
+  container.innerHTML = String(out);
   restoreFocus(container, key);
 }

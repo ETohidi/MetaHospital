@@ -1,13 +1,26 @@
-// Level 5: one unit of our own hospital (ED, ICU or Ward) - its beds over the day, who
-// is in it, who is waiting to move in, and what the charge nurse decided about it.
+// Unit level: one unit of our own hospital (ED, ICU or Ward), the charge nurse's screen.
+// Same anatomy as the hospital page: head, KPI strip, main column (beds, charts, patients),
+// rail (the plan decision, what the unit shares, what it gets), levels panel and sources.
 
 import { OWN_HOSPITAL, UNITS, UNIT_LABEL } from "../data/places.js";
 import { clock, dayClock, DAY_START } from "../engine/clock.js";
-import { ACUITY_LABEL, UTIL_LABEL, acuity, chip, confBar, html, meter, pct, plural, raw, utilTone } from "./dom.js";
+import { ACUITY_LABEL, acuity, confBar, html, plural, raw, utilTone } from "./dom.js";
+import {
+  bedBoard,
+  capabilityStatus,
+  handleBedClick,
+  handleDecisionClick,
+  onDraftEdit,
+  onRejectSubmit,
+  requestsCard,
+  utilStatus,
+} from "./hospital.js";
+import { levelsPanel } from "./levels.js";
+import { kpiStrip, pageHead, pill, prov, simBadge, sourcesFooter } from "./page.js";
 
 const CONDITION_ORDER = ["trauma", "cardiac", "respiratory", "stroke", "infection", "other"];
 const HISTORY_WINDOW = 24; // hours of history drawn; older hours scroll off the left
-const TIP_CHAR_W = 6.6; // rough width of one 11px mono character, for sizing tooltip boxes
+const TIP_CHAR_W = 6.6; // rough width of one 11px tabular-figure character, for sizing tooltip boxes
 
 const UNIT_ROLE = {
   ED: "Takes every new arrival, stabilises them and moves those who need a bed upstairs to Intensive Care or the ward.",
@@ -15,7 +28,8 @@ const UNIT_ROLE = {
   Ward: "Cares for patients who are stable but still need a bed, until they can go home.",
 };
 
-const PLAN_TONE = { approved: "ok", rejected: "crit", expired: "warn", pending: "accent" };
+const PLAN_TONE = { approved: "ok", rejected: "crit", expired: "mute", pending: "warn" };
+const PLAN_LABEL = { approved: "Approved", rejected: "Rejected", expired: "Expired", pending: "Waiting" };
 
 // -- time formatting ---------------------------------------------------------------
 const dayOf = (tick) => Math.floor((DAY_START.hour + tick) / 24);
@@ -60,8 +74,8 @@ const f1 = (n) => n.toFixed(1);
 function chartWidth(container) {
   let w = container.querySelector?.(".unit-chart-box")?.clientWidth;
   const page = container.clientWidth;
-  // page padding, panel and gap on wide screens, then the card's own padding
-  if (!w && page) w = page > 980 ? page - 40 - 380 - 16 - 34 : page - 32 - 34;
+  // page padding, rail and gap on wide screens, then the card's own padding
+  if (!w && page) w = page > 1180 ? page - 40 - 360 - 20 - 34 : page - 32 - 34;
   return Math.round(Math.max(280, Math.min(760, w || 720)));
 }
 
@@ -197,16 +211,16 @@ function bedsChart(data, unitSnap, width, unit) {
     ${yGrid(axis, scale, y, plotRight)}
     <line class="unit-baseline" x1="${m.left}" x2="${plotRight}" y1="${plotBottom}" y2="${plotBottom}" stroke="var(--ink-3)" />
     ${xLabels(axis, plotBottom)}
-    <path d="${area}" fill="var(--accent)" fill-opacity="0.1" stroke="none" />
+    <path d="${area}" fill="var(--seq-4)" fill-opacity="0.1" stroke="none" />
     <path d="${usablePath}" fill="none" stroke="var(--ink-2)" stroke-width="1.5" stroke-linejoin="round" />
-    <path d="${projPath}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="${inUseLine}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="${projPath}" fill="none" stroke="var(--seq-4)" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="${inUseLine}" fill="none" stroke="var(--seq-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
     <line x1="${f1(nowX)}" x2="${f1(nowX)}" y1="${m.top - 6}" y2="${plotBottom}" stroke="var(--ink-2)" stroke-width="1" />
     <text class="unit-now" x="${f1(roomLeft ? nowX - 5 : nowX + 5)}" y="${m.top - 12}" text-anchor="${roomLeft ? "end" : "start"}">now ${clock(tNow)}</text>
     ${showRegionLabel ? html`<text class="unit-axis" x="${f1(nowX + 6)}" y="${m.top - 12}">${regionText}</text>` : ""}
     <text class="unit-value" x="${f1(plotRight + 6)}" y="${f1(usableY + 4)}">${staffedNow}</text>
     ${projLabel ? html`<text class="unit-value unit-value-soft" x="${f1(plotRight + 6)}" y="${f1(projY + 4)}">~${projEnd.projectedInUse}</text>` : ""}
-    <circle cx="${f1(nowX)}" cy="${f1(nowY)}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" />
+    <circle cx="${f1(nowX)}" cy="${f1(nowY)}" r="4.5" fill="var(--seq-4)" stroke="var(--surface)" stroke-width="2" />
     <text class="unit-value" x="${f1(roomLeft ? nowX - 8 : nowX + 8)}" y="${f1(dotLabelY)}" text-anchor="${roomLeft ? "end" : "start"}">${nowV}</text>
     ${hoverColumns(axis, m.top, plotBottom, tip)}
   </svg>`;
@@ -253,7 +267,7 @@ function flowChart(data, width, unit) {
   };
   const bars = rows.map((r) => {
     const cx = x(r.tick);
-    return html`${column(cx - barW - 1, r.arrivals, movedIn(r), "var(--accent)")}
+    return html`${column(cx - barW - 1, r.arrivals, movedIn(r), "var(--seq-4)")}
       ${column(cx + 1, r.discharges, movedOut(r), "var(--ink-3)")}`;
   });
 
@@ -310,7 +324,7 @@ function hourlyTable(data, show) {
         <tbody>
           ${[...rows].reverse().map(
             (r, i) => html`<tr>
-              <td class="mono">${hourLabel(r.tick, now)}${i === 0 ? html` <span class="faint">now</span>` : ""}</td>
+              <td class="num">${hourLabel(r.tick, now)}${i === 0 ? html` <span class="faint">now</span>` : ""}</td>
               <td class="num">${r.inUse}</td><td class="num">${r.usable}</td>
               <td class="num">${r.arrivals}</td>${moves ? html`<td class="num">${movedIn(r)}</td>` : ""}
               <td class="num">${r.discharges}</td>${moves ? html`<td class="num">${movedOut(r)}</td>` : ""}
@@ -319,7 +333,7 @@ function hourlyTable(data, show) {
           )}
           ${projection.map(
             (p) => html`<tr class="unit-row-ahead">
-              <td class="mono">${hourLabel(p.tick, now)} <span class="faint">projected</span></td>
+              <td class="num">${hourLabel(p.tick, now)} <span class="faint">projected</span></td>
               <td class="num">~${p.projectedInUse}</td>${Array.from({ length: moves ? 6 : 4 }, () => html`<td class="faint">—</td>`)}
             </tr>`,
           )}
@@ -328,8 +342,9 @@ function hourlyTable(data, show) {
     </div>`;
 }
 
-// -- stage sections -----------------------------------------------------------------------
-function chartsCard(data, unitSnap, unit, width, showHours) {
+
+// -- main column ------------------------------------------------------------------------------
+function chartsCard(data, unitSnap, unit, width, showHours, snap) {
   const firstTick = data.rows[0].tick;
   const nowTick = data.rows.at(-1).tick;
   const title = dayOf(firstTick) === dayOf(nowTick) ? "Beds in use today" : `Beds in use, last ${data.rows.length} hours`;
@@ -338,39 +353,40 @@ function chartsCard(data, unitSnap, unit, width, showHours) {
     ? when(firstTick, nowTick)
     : (data.rows[0].dayTime ?? dayClock(firstTick));
   const moves = hasMoves(data.rows);
-  return html`<div class="card unit-card">
-    <div class="unit-card-head">
+  return html`<section class="pane" aria-labelledby="unit-chart-title">
+    <header class="pane-head">
       <div>
-        <h3>${title}</h3>
-        <p class="muted">From ${since} to now, then the next ${data.projection.length} hours projected from the discharges already planned and the recent rate of arrivals and moves between units.</p>
+        <h2 id="unit-chart-title">${title}</h2>
+        <p>From ${since} to now, then the next ${data.projection.length} hours projected from the discharges already planned and the recent rate of arrivals and moves between units.</p>
       </div>
+      ${prov("simulated", { label: "Simulated, forecast", title: `Seeded simulation (seed ${snap.seed}); the dashed part is a projection` })}
+    </header>
+    <div class="pane-body">
       <div class="legend" aria-hidden="true">
-        <span>${lineKey("var(--accent)")} In use</span>
+        <span>${lineKey("var(--seq-4)")} In use</span>
         <span>${lineKey("var(--ink-2)", { width: 1.5 })} Usable today</span>
-        <span>${lineKey("var(--accent)", { dashed: true })} Projected</span>
+        <span>${lineKey("var(--seq-4)", { dashed: true })} Projected</span>
       </div>
-    </div>
-    <div class="unit-chart-box">${bedsChart(data, unitSnap, width, unit)}</div>
+      <div class="unit-chart-box">${bedsChart(data, unitSnap, width, unit)}</div>
 
-    <div class="unit-card-head unit-card-sub">
-      <div>
+      <div class="unit-card-sub">
         <h3>${moves ? "Patients in and out" : "Arrivals and discharges"}</h3>
-        <p class="muted">${
+        <p class="unit-card-note">${
           moves
             ? "Per hour: new patients and patients moved in from other units, then patients who went home and patients moved out to other units or hospitals."
             : "New patients and patients who went home, per hour. Moves between units and to other hospitals are not counted."
         }</p>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch" style="background: var(--seq-4)"></i> Arrived</span>
+          ${moves ? html`<span><i class="swatch unit-swatch-soft" style="background: var(--seq-4)"></i> Moved in</span>` : ""}
+          <span><i class="swatch" style="background: var(--ink-3)"></i> Went home</span>
+          ${moves ? html`<span><i class="swatch unit-swatch-soft" style="background: var(--ink-3)"></i> Moved out</span>` : ""}
+        </div>
       </div>
-      <div class="legend" aria-hidden="true">
-        <span><i class="swatch" style="background: var(--accent)"></i> Arrived</span>
-        ${moves ? html`<span><i class="swatch unit-swatch-soft" style="background: var(--accent)"></i> Moved in</span>` : ""}
-        <span><i class="swatch" style="background: var(--ink-3)"></i> Went home</span>
-        ${moves ? html`<span><i class="swatch unit-swatch-soft" style="background: var(--ink-3)"></i> Moved out</span>` : ""}
-      </div>
+      <div class="unit-chart-box">${flowChart(data, width, unit)}</div>
+      <div class="unit-hours">${hourlyTable(data, showHours)}</div>
     </div>
-    <div class="unit-chart-box">${flowChart(data, width, unit)}</div>
-    <div class="unit-hours">${hourlyTable(data, showHours)}</div>
-  </div>`;
+  </section>`;
 }
 
 function patientsCard(patients, snap, unit) {
@@ -378,19 +394,18 @@ function patientsCard(patients, snap, unit) {
     (a, b) => (a.bed ?? Infinity) - (b.bed ?? Infinity) || Number(a.id.slice(1)) - Number(b.id.slice(1)),
   );
   const hallway = sorted.filter((p) => p.bed === null).length;
-  return html`<div class="card unit-card">
-    <div class="unit-card-head">
+  return html`<section class="pane" aria-labelledby="unit-patients-title">
+    <header class="pane-head">
       <div>
-        <h3>Patients</h3>
-        ${
+        <h2 id="unit-patients-title">Patients</h2>
+        <p>${
           sorted.length
-            ? html`<p class="muted">${plural(sorted.length, "patient")} in ${unit}${
-                hallway ? `, ${hallway} of them in the hallway without a usable bed` : ""
-              }.</p>`
-            : ""
-        }
+            ? `${plural(sorted.length, "patient")} in ${unit}${hallway ? `, ${hallway} of them in the hallway without a usable bed` : ""}. Simulated patients; nothing here leaves the unit.`
+            : "Simulated patients; nothing here leaves the unit."
+        }</p>
       </div>
-    </div>
+      ${simBadge(snap)}
+    </header>
     ${
       sorted.length
         ? html`<div class="table-wrap unit-scroll" data-keep-scroll="unit-patients" role="region" aria-label="Patients in ${unit}" tabindex="0">
@@ -399,17 +414,17 @@ function patientsCard(patients, snap, unit) {
               <tbody>
                 ${sorted.map(
                   (p) => html`<tr class="${p.bed === null ? "unit-row-hallway" : ""}">
-                    <td>${p.bed === null ? chip("Hallway", "warn") : html`<span class="num">${p.bed}</span>`}</td>
+                    <td>${p.bed === null ? pill("Hallway", "warn") : html`<span class="num">${p.bed}</span>`}</td>
                     <td>
-                      <span class="mono">${p.id}</span>
+                      <span class="num">${p.id}</span>
                       <span class="unit-narrow unit-cell-sub unit-cell-cond">${p.condition}</span>
-                      ${p.surge ? html`<span class="unit-narrow unit-cell-sub">${chip("Bus accident", "crit")}</span>` : ""}
+                      ${p.surge ? html`<span class="unit-narrow unit-cell-sub">${pill("Bus accident", "crit")}</span>` : ""}
                     </td>
                     <td class="unit-wide">${p.condition}</td>
                     <td>${acuity(p.acuity)}</td>
                     <td class="num unit-wide">${inUnitSince(p.admitTick, snap.tick)}</td>
                     <td class="num unit-wide">${when(p.expectedDischargeTick, snap.tick)}</td>
-                    <td class="unit-wide">${p.surge ? chip("Bus accident", "crit") : html`<span class="faint">—</span>`}</td>
+                    <td class="unit-wide">${p.surge ? pill("Bus accident", "crit") : html`<span class="faint">—</span>`}</td>
                     <td class="num unit-narrow unit-stay">
                       <span class="unit-cell-sub"><span class="faint">since</span> <span class="unit-nowrap">${inUnitSince(p.admitTick, snap.tick)}</span></span>
                       <span class="unit-cell-sub"><span class="faint">leaves ~</span> <span class="unit-nowrap">${when(p.expectedDischargeTick, snap.tick)}</span></span>
@@ -419,41 +434,66 @@ function patientsCard(patients, snap, unit) {
               </tbody>
             </table>
           </div>`
-        : html`<p class="muted unit-empty">No patients in this unit right now.</p>`
+        : html`<div class="pane-body"><p class="muted">No patients in this unit right now.</p></div>`
     }
-  </div>`;
+  </section>`;
 }
 
-// -- panel sections --------------------------------------------------------------------------
-function numbersCard(unitSnap, patients, snap) {
+// -- rail ---------------------------------------------------------------------------------------
+/** Counts only, up to the hospital: what this unit shares with the bed managers every hour. */
+function sharedByUnitCard(unitSnap, patients, snap, unit) {
   const { bedsOccupied: inUse, bedsStaffed: usable, bedsTotal } = unitSnap;
-  const fraction = usable ? inUse / usable : inUse ? 2 : 0;
   const free = usable - inUse;
   const upcoming = patients.filter((p) => p.expectedDischargeTick > snap.tick);
   const next = upcoming.reduce((min, p) => Math.min(min, p.expectedDischargeTick), Infinity);
   const soon = patients.filter((p) => p.expectedDischargeTick > snap.tick && p.expectedDischargeTick <= snap.tick + 3).length;
-  return html`<div class="card">
-    <h3>Beds right now</h3>
-    <div class="grid-3 unit-stats">
-      <div class="stat"><span class="stat-value">${inUse}</span><span class="stat-label">in use</span></div>
-      <div class="stat"><span class="stat-value">${usable}</span><span class="stat-label">usable today</span></div>
-      <div class="stat"><span class="stat-value">${bedsTotal}</span><span class="stat-label">beds</span></div>
+  return html`<section class="pane" aria-labelledby="unit-shared-by-title">
+    <header class="pane-head">
+      <div>
+        <h2 id="unit-shared-by-title">Shared by me</h2>
+        <p>To the hospital's bed managers, every hour: counts only</p>
+      </div>
+      ${simBadge(snap)}
+    </header>
+    <div class="pane-body">
+      <dl class="kv">
+        <dt>Free beds</dt>
+        <dd class="num">${free >= 0 ? free : html`none, <strong class="is-crit-text">${-free} over</strong>`}</dd>
+        <dt>Closed today (no staff)</dt>
+        <dd class="num">${Math.max(0, bedsTotal - usable)}</dd>
+        <dt>Expected to leave, next 3 h</dt>
+        <dd class="num">${soon}</dd>
+        <dt>Next discharge</dt>
+        <dd class="num">${Number.isFinite(next) ? when(next, snap.tick) : "none planned"}</dd>
+        <dt>${unit === "ED" ? "Waiting for a bed upstairs" : "Waiting to move in"}</dt>
+        <dd class="num">${waitingList(snap, unit).length}</dd>
+      </dl>
+      <div class="never"><b>Never leaves the unit:</b> patient data to staff without a treatment relationship; staff health or performance data.</div>
     </div>
-    <div class="unit-meter">
-      ${meter(fraction, { label: "Share of usable beds in use" })}
-      <span class="faint">${pct(fraction)} of usable beds in use</span>
+  </section>`;
+}
+
+/** The rest of the hospital, as status per unit. */
+function sharedWithUnitCard(snap, unit, routes) {
+  const others = UNITS.filter((u) => u !== unit);
+  return html`<section class="pane" aria-labelledby="unit-shared-with-title">
+    <header class="pane-head">
+      <div>
+        <h2 id="unit-shared-with-title">Shared with me</h2>
+        <p>The other units of ${OWN_HOSPITAL.name}</p>
+      </div>
+      ${simBadge(snap)}
+    </header>
+    <div class="pane-body">
+      <dl class="kv">
+        ${others.map((u) => {
+          const s = capabilityStatus(snap.units[u]);
+          return html`<dt><a href="#${routes.unit(u)}" data-focus-key="unit-peer-${u}">${UNIT_LABEL[u]}</a></dt><dd><span class="cap is-${s.tone}">${s.word}${s.reason ? html`<small>${s.reason}</small>` : ""}</span></dd>`;
+        })}
+      </dl>
+      <p class="pane-note">A patient's record moves only with the patient, to the receiving unit.</p>
     </div>
-    <dl class="kv">
-      <dt>Free beds</dt>
-      <dd>${free >= 0 ? free : html`none, <strong>${-free} over</strong>`}</dd>
-      <dt>Next discharge</dt>
-      <dd>${Number.isFinite(next) ? when(next, snap.tick) : "none planned"}</dd>
-      <dt>Expected to leave in the next 3 hours</dt>
-      <dd>${soon}</dd>
-      <dt>Beds not usable today (no staff)</dt>
-      <dd>${Math.max(0, bedsTotal - usable)}</dd>
-    </dl>
-  </div>`;
+  </section>`;
 }
 
 /** ICU and Ward: who waits to move in. ED: who waits in the ED for a bed upstairs. */
@@ -466,29 +506,40 @@ function waitingList(snap, unit) {
   return snap.units[unit].queue.map((q) => ({ ...q, where: `from ${q.from}` }));
 }
 
+function railPane(id, title, sub, snap, body) {
+  return html`<section class="pane" aria-labelledby="${id}">
+    <header class="pane-head">
+      <div><h2 id="${id}">${title}</h2>${sub ? html`<p>${sub}</p>` : ""}</div>
+      ${simBadge(snap)}
+    </header>
+    <div class="pane-body">${body}</div>
+  </section>`;
+}
+
 function waitingCard(snap, unit) {
   const list = waitingList(snap, unit).sort((a, b) => b.acuity - a.acuity || b.waitingTicks - a.waitingTicks);
   const title = unit === "ED" ? "Waiting for a bed upstairs" : "Waiting to move in";
   const empty = unit === "ED" ? "Nobody in the ED is waiting for an ICU or ward bed." : `Nobody is waiting to move into ${unit}.`;
-  return html`<div class="card">
-    <h3>${title}</h3>
-    ${
-      list.length
-        ? html`<ul class="unit-list">
-            ${list.map(
-              (q) => html`<li>
-                ${acuity(q.acuity)}
-                <span class="unit-list-main"><span class="mono">${q.patientId}</span> <span class="muted">${q.condition}</span></span>
-                <span class="unit-list-meta">${q.where}, ${waitedFor(q.waitingTicks)}</span>
-              </li>`,
-            )}
-          </ul>`
-        : html`<p class="muted">${empty}</p>`
-    }
-  </div>`;
+  return railPane(
+    "unit-waiting-title",
+    title,
+    "Sickest first",
+    snap,
+    list.length
+      ? html`<ul class="unit-list">
+          ${list.map(
+            (q) => html`<li>
+              ${acuity(q.acuity)}
+              <span class="unit-list-main"><span class="num">${q.patientId}</span> <span class="muted">${q.condition}</span></span>
+              <span class="unit-list-meta">${q.where}, ${waitedFor(q.waitingTicks)}</span>
+            </li>`,
+          )}
+        </ul>`
+      : html`<p class="muted">${empty}</p>`,
+  );
 }
 
-function conditionsCard(patients) {
+function conditionsCard(patients, snap) {
   const counts = new Map();
   for (const p of patients) {
     const row = counts.get(p.condition) ?? { total: 0, byAcuity: [0, 0, 0, 0, 0, 0] };
@@ -500,97 +551,83 @@ function conditionsCard(patients) {
   const extra = [...counts.keys()].filter((c) => !CONDITION_ORDER.includes(c));
   const conditions = [...known, ...extra];
   const maxTotal = Math.max(1, ...[...counts.values()].map((r) => r.total));
-  const TRACK_PX = 200; // rough bar track width in the panel, to decide if a count fits inside
+  const TRACK_PX = 200; // rough bar track width in the rail, to decide if a count fits inside
 
-  return html`<div class="card">
-    <h3>Conditions right now</h3>
-    ${
-      conditions.length
-        ? html`<div class="unit-cond">
-            ${conditions.map((c) => {
-              const row = counts.get(c);
-              const parts = [5, 4, 3, 2, 1].filter((a) => row.byAcuity[a]);
-              const said = parts.map((a) => `${row.byAcuity[a]} at acuity ${a}`).join(", ");
-              return html`<div class="unit-cond-row">
-                <span class="unit-cond-name">${c}</span>
-                <span class="unit-cond-track" role="img" aria-label="${c}: ${row.total} patients, ${said}">
-                  <span class="unit-cond-bar" style="width: ${f1((row.total / maxTotal) * 100)}%">
-                    ${parts.map((a) => {
-                      const n = row.byAcuity[a];
-                      const fits = (n / maxTotal) * TRACK_PX >= 18;
-                      return html`<span class="unit-seg tri tri-${a}" style="flex-grow: ${n}" title="${c}, acuity ${a} (${ACUITY_LABEL[a]}): ${n}">${fits ? n : ""}</span>`;
-                    })}
-                  </span>
+  return railPane(
+    "unit-cond-title",
+    "Conditions right now",
+    "Patients by condition, coloured by acuity",
+    snap,
+    conditions.length
+      ? html`<div class="unit-cond">
+          ${conditions.map((c) => {
+            const row = counts.get(c);
+            const parts = [5, 4, 3, 2, 1].filter((a) => row.byAcuity[a]);
+            const said = parts.map((a) => `${row.byAcuity[a]} at acuity ${a}`).join(", ");
+            return html`<div class="unit-cond-row">
+              <span class="unit-cond-name">${c}</span>
+              <span class="unit-cond-track" role="img" aria-label="${c}: ${row.total} patients, ${said}">
+                <span class="unit-cond-bar" style="width: ${f1((row.total / maxTotal) * 100)}%">
+                  ${parts.map((a) => {
+                    const n = row.byAcuity[a];
+                    const fits = (n / maxTotal) * TRACK_PX >= 18;
+                    return html`<span class="unit-seg tri tri-${a}" style="flex-grow: ${n}" title="${c}, acuity ${a} (${ACUITY_LABEL[a]}): ${n}">${fits ? n : ""}</span>`;
+                  })}
                 </span>
-                <span class="unit-cond-total num">${row.total}</span>
-              </div>`;
-            })}
-          </div>
-          <div class="legend unit-cond-legend">
-            ${[5, 4, 3, 2, 1].map((a) => html`<span><i class="swatch" style="background: var(--tri-${a})"></i>${a} ${ACUITY_LABEL[a]}</span>`)}
-          </div>`
-        : html`<p class="muted">No patients in this unit right now.</p>`
-    }
-  </div>`;
+              </span>
+              <span class="unit-cond-total num">${row.total}</span>
+            </div>`;
+          })}
+        </div>
+        <div class="legend unit-cond-legend">
+          ${[5, 4, 3, 2, 1].map((a) => html`<span><i class="swatch" style="background: var(--tri-${a})"></i>${a} ${ACUITY_LABEL[a]}</span>`)}
+        </div>`
+      : html`<p class="muted">No patients in this unit right now.</p>`,
+  );
 }
 
-function plansCard(plans, ctx) {
-  return html`<div class="card">
-    <h3>Recent plans for this unit</h3>
-    ${
-      plans.length
-        ? html`<ul class="unit-list">
-            ${plans.map(
-              (p) => html`<li class="unit-plan">
-                <span class="mono">${p.hourRange}</span>
-                ${chip(p.status, PLAN_TONE[p.status] ?? "")}
-                <span class="unit-plan-conf"><span class="faint">confidence</span> ${confBar(p.confidence)}</span>
-              </li>`,
-            )}
-          </ul>
-          ${
-            plans.some((p) => p.status === "pending")
-              ? html`<p class="unit-note"><a href="#${ctx.routes.hospital(OWN_HOSPITAL.id)}" data-focus-key="unit-decide">Decide on the waiting plan at the bed board</a></p>`
-              : ""
-          }`
-        : html`<p class="muted">No plans for this unit yet.</p>`
-    }
-  </div>`;
+function plansCard(plans, snap) {
+  return railPane(
+    "unit-plans-title",
+    "Recent plans for this unit",
+    "",
+    snap,
+    plans.length
+      ? html`<ul class="unit-list">
+          ${plans.map(
+            (p) => html`<li class="unit-plan">
+              <span class="num">${p.hourRange}</span>
+              ${pill(PLAN_LABEL[p.status] ?? p.status, PLAN_TONE[p.status] ?? "mute")}
+              <span class="unit-plan-conf"><span class="faint">confidence</span> ${confBar(p.confidence)}</span>
+            </li>`,
+          )}
+        </ul>
+        ${plans.some((p) => p.status === "pending") ? html`<p class="unit-note">The waiting plan is under Requests.</p>` : ""}`
+      : html`<p class="muted">No plans for this unit yet.</p>`,
+  );
 }
 
-function rejectionsCard(unitSnap) {
+function rejectionsCard(unitSnap, snap) {
   const said = [...unitSnap.recentRejections].reverse();
-  return html`<div class="card">
-    <h3>What the charge nurse said recently</h3>
-    ${
-      said.length
-        ? html`<div class="stack">
-            ${said.map((text) =>
-              text === "rejected"
-                ? html`<p class="muted unit-quote">Rejected a plan without giving a reason.</p>`
-                : html`<blockquote class="unit-quote">“${text}”</blockquote>`,
-            )}
-          </div>
-          <p class="faint unit-note">The unit's planner keeps these in mind for the next few hours.</p>`
-        : html`<p class="muted">No recent rejections.</p>`
-    }
-  </div>`;
+  return railPane(
+    "unit-said-title",
+    "What the charge nurse said recently",
+    "",
+    snap,
+    said.length
+      ? html`<div class="unit-quotes">
+          ${said.map((text) =>
+            text === "rejected"
+              ? html`<p class="muted unit-quote">Rejected a plan without giving a reason.</p>`
+              : html`<blockquote class="unit-quote">“${text}”</blockquote>`,
+          )}
+        </div>
+        <p class="faint unit-note">The unit's planner keeps these in mind for the next few hours.</p>`
+      : html`<p class="muted">No recent rejections.</p>`,
+  );
 }
 
-// -- head ------------------------------------------------------------------------------------
-function headChips(snap, unit, unitSnap) {
-  const fraction = unitSnap.bedsStaffed ? unitSnap.bedsOccupied / unitSnap.bedsStaffed : unitSnap.bedsOccupied ? 2 : 0;
-  const tone = utilTone(fraction);
-  const chips = [chip(`${UTIL_LABEL[tone]} · ${pct(fraction)} of usable beds in use`, tone)];
-  const waiting = waitingList(snap, unit).length;
-  chips.push(chip(unit === "ED" ? `${waiting} waiting for a bed upstairs` : `${waiting} waiting to move in`, waiting ? "warn" : ""));
-  if (unit === "ED" && snap.surge) chips.push(chip(`Emergency: ${snap.surge}`, "crit"));
-  if (unit === "ED" && snap.edDivertHoursRemaining > 0) {
-    chips.push(chip(`Ambulances diverted, ${snap.edDivertHoursRemaining}h left`, "warn"));
-  }
-  return chips;
-}
-
+// -- head and KPIs ------------------------------------------------------------------------------
 function unitTabs(snap, current, routes) {
   return html`<nav class="unit-tabs" aria-label="Units of ${OWN_HOSPITAL.name}">
     ${UNITS.map((u) => {
@@ -599,10 +636,70 @@ function unitTabs(snap, current, routes) {
       return html`<a class="unit-tab" href="#${routes.unit(u)}" data-focus-key="unit-tab-${u}"${u === current ? raw(' aria-current="page"') : ""}>
         <span class="unit-tab-dot is-${tone}" aria-hidden="true"></span>
         <span class="unit-tab-name">${u}</span>
-        <span class="unit-tab-beds mono">${s.bedsOccupied}/${s.bedsStaffed}</span>
+        <span class="unit-tab-beds num">${s.bedsOccupied}/${s.bedsStaffed}</span>
       </a>`;
     })}
   </nav>`;
+}
+
+function unitKpis(data, unitSnap, snap, unit) {
+  const { bedsOccupied: inUse, bedsStaffed: usable, bedsTotal } = unitSnap;
+  const fraction = usable ? inUse / usable : inUse ? 2 : 0;
+  const free = usable - inUse;
+  const closed = Math.max(0, bedsTotal - usable);
+  const waiting = waitingList(snap, unit);
+  const hallway = Math.max(0, inUse - usable);
+  const sickest = waiting.reduce((m, q) => Math.max(m, q.acuity), 0);
+  const end = data.projection.at(-1);
+  const sim = simBadge(snap);
+  const net = end ? end.projectedInUse - inUse : null;
+  return kpiStrip([
+    {
+      label: "Beds in use",
+      value: Math.round(fraction * 100),
+      unit: "%",
+      detail: `${inUse} patients in ${usable} usable beds`,
+      badge: sim,
+      alert: fraction > 0.95,
+      spark: data.rows.map((r) => (r.usable ? r.inUse / r.usable : 1)),
+      sparkLabel: "Share of usable beds in use, recent hours",
+    },
+    {
+      label: "Free beds now",
+      value: Math.max(0, free),
+      detail: free >= 0 ? `of ${usable} usable today` : `${-free} patients over the usable beds`,
+      badge: sim,
+      alert: free <= 0,
+    },
+    {
+      label: "Closed: no staff",
+      value: closed,
+      unit: closed === 1 ? "bed" : "beds",
+      detail: `of ${bedsTotal} beds; they open when a nurse is on shift`,
+      badge: sim,
+    },
+    {
+      label: unit === "ED" ? "Waiting for a bed upstairs" : "Waiting to move in",
+      value: waiting.length,
+      unit: waiting.length === 1 ? "patient" : "patients",
+      detail: hallway
+        ? `${hallway} in the hallway without a usable bed`
+        : waiting.length
+          ? `sickest at acuity ${sickest} (${ACUITY_LABEL[sickest]})`
+          : "nobody waiting",
+      badge: sim,
+      alert: hallway > 0 || sickest >= 4,
+    },
+    end
+      ? {
+          label: `Next ${data.projection.length} h, net`,
+          value: net > 0 ? `+${net}` : net < 0 ? `−${-net}` : "±0",
+          unit: "patients",
+          detail: `projected ${end.projectedInUse} in use at ${clock(end.tick)}`,
+          badge: prov("simulated", { label: "Forecast", title: "Projection of the seeded simulation, not a measurement" }),
+        }
+      : null,
+  ]);
 }
 
 // -- view ------------------------------------------------------------------------------------
@@ -635,37 +732,49 @@ export function render(container, ctx) {
   const patients = snap.patients.filter((p) => p.unit === unit);
   const data = chartData(twin, unit, unitSnap);
   const width = chartWidth(container);
+  const fraction = unitSnap.bedsStaffed ? unitSnap.bedsOccupied / unitSnap.bedsStaffed : unitSnap.bedsOccupied ? 2 : 0;
 
   container.innerHTML = String(html`
-    <div class="view-head">
-      <div>
-        <div class="eyebrow">${OWN_HOSPITAL.name} · Unit</div>
-        <h1>${UNIT_LABEL[unit]} (${unit})</h1>
-        <p>${UNIT_ROLE[unit]}</p>
+    <div class="pg">
+      ${pageHead({
+        level: "Unit",
+        place: `${OWN_HOSPITAL.name} · demo twin`,
+        title: `${UNIT_LABEL[unit]} (${unit})`,
+        question: UNIT_ROLE[unit],
+        sees: "every bed and patient in this unit; shares only counts with the hospital.",
+        status: utilStatus(fraction),
+        fresh: { badge: simBadge(snap), text: `Twin time ${snap.dayTime}` },
+        extra: unitTabs(snap, unit, routes),
+      })}
+      ${data.rows.length ? unitKpis(data, unitSnap, snap, unit) : ""}
+      <div class="pg-grid">
+        <div class="pg-main">
+          ${bedBoard(ctx, [unit], { links: false, title: "Beds" })}
+          ${data.rows.length ? chartsCard(data, unitSnap, unit, width, state.showHours, snap) : ""}
+          ${patientsCard(patients, snap, unit)}
+        </div>
+        <aside class="pg-rail" aria-label="${unit}: requests and sharing">
+          ${requestsCard(ctx, { focusUnit: unit })}
+          ${sharedByUnitCard(unitSnap, patients, snap, unit)}
+          ${sharedWithUnitCard(snap, unit, routes)}
+          ${waitingCard(snap, unit)}
+          ${conditionsCard(patients, snap)}
+          ${plansCard(twin.unitPlans(unit), snap)}
+          ${rejectionsCard(unitSnap, snap)}
+        </aside>
       </div>
-      <div class="row">${headChips(snap, unit, unitSnap)}</div>
-    </div>
-    ${unitTabs(snap, unit, routes)}
-    <div class="layout">
-      <section class="stage unit-stage" aria-label="${unit} beds and patients">
-        ${data.rows.length ? chartsCard(data, unitSnap, unit, width, state.showHours) : ""}
-        ${patientsCard(patients, snap, unit)}
-      </section>
-      <aside class="panel" aria-label="${unit} summary">
-        ${numbersCard(unitSnap, patients, snap)}
-        ${waitingCard(snap, unit)}
-        ${conditionsCard(patients)}
-        ${plansCard(twin.unitPlans(unit), ctx)}
-        ${rejectionsCard(unitSnap)}
-        <a class="btn unit-back" href="#${routes.hospital(OWN_HOSPITAL.id)}" data-focus-key="unit-back">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
-          Back to the bed board
-        </a>
-      </aside>
+      ${levelsPanel("unit", { place: `${UNIT_LABEL[unit]}, ${OWN_HOSPITAL.name}`, links: { hospital: OWN_HOSPITAL.id } })}
+      ${sourcesFooter([
+        { badge: simBadge(snap), text: `Every patient, bed and number on this page comes from the seeded simulation (seed ${snap.seed}); ${OWN_HOSPITAL.name} is a fictional demo twin. No real patient data is used.` },
+        { badge: html`<span class="prov is-rule">Rule</span>`, text: "Acuity uses the five Manchester Triage colours. The unit planner, the Coordinator and the Safety check are rule-based; a person approves every plan." },
+        { badge: prov("illustrative"), text: "What the unit shares with the hospital shows how a real deployment would work." },
+      ])}
     </div>
   `);
 
   container.onclick = (event) => {
+    if (handleDecisionClick(event, ctx)) return;
+    if (handleBedClick(event, ctx)) return;
     const btn = event.target.closest("[data-action='toggle-hours']");
     if (!btn) return;
     state.showHours = !state.showHours;
@@ -673,4 +782,7 @@ export function render(container, ctx) {
     // The button was rebuilt by the re-render; keep keyboard focus on it.
     container.querySelector?.("[data-action='toggle-hours']")?.focus();
   };
+  container.onchange = (event) => onDraftEdit(event, ctx);
+  container.oninput = (event) => onDraftEdit(event, ctx);
+  container.onsubmit = (event) => onRejectSubmit(event, ctx);
 }

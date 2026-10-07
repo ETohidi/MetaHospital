@@ -1,25 +1,26 @@
-/* Level 5: one unit of the own hospital. Charts on the stage, the unit's numbers,
-   queue, conditions, plans and charge-nurse feedback in the panel. */
+/* Unit level: one unit of the own hospital. The page anatomy (head, KPI strip, panes,
+   rail, levels panel, sources) lives in hospital.css; this file holds what only the unit
+   page has: the unit switcher, the two charts, the patients table and the rail lists.
+   Triage colours (--tri-*) are used only at this level and on the bed board. */
 
-/* -- unit switcher ---------------------------------------------------------- */
+/* -- unit switcher (peer switcher in the page head) -------------------------------------- */
 .unit-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   width: fit-content;
   max-width: 100%;
-  margin: 0 0 var(--gap);
   padding: 4px;
-  border-radius: var(--radius);
+  border-radius: var(--r);
   background: var(--surface-2);
 }
 .unit-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 34px;
   padding: 4px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   color: var(--ink-2);
   text-decoration: none;
   font-weight: 600;
@@ -34,18 +35,19 @@
   box-shadow: var(--shadow);
 }
 .unit-tab-name {
-  font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 14px;
 }
 .unit-tab-beds {
-  font-size: 0.75rem;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
 }
 .unit-tab-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ok);
+  background: var(--good);
 }
 .unit-tab-dot.is-warn {
   background: var(--warn);
@@ -54,27 +56,21 @@
   background: var(--crit);
 }
 
-/* -- stage cards -------------------------------------------------------------- */
-.unit-stage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-.unit-card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px 16px;
-}
-.unit-card-head p {
-  margin-top: 2px;
-  font-size: var(--step--1);
-}
+/* -- charts ------------------------------------------------------------------------------ */
 .unit-card-sub {
+  display: grid;
+  gap: 4px;
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
+}
+.unit-card-sub h3 {
+  font-size: 14px;
+  font-weight: 650;
+}
+.unit-card-note {
+  font-size: 12.5px;
+  color: var(--ink-3);
 }
 .unit-key {
   display: inline-block;
@@ -89,14 +85,13 @@
   overflow: visible;
 }
 .unit-chart text {
-  font-family: var(--font-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   fill: var(--ink-3);
 }
 .unit-chart .unit-value {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   fill: var(--ink);
 }
 .unit-chart .unit-value-soft {
@@ -114,10 +109,7 @@
   stroke-linejoin: round;
 }
 .unit-grid,
-.unit-tick {
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
+.unit-tick,
 .unit-baseline {
   stroke-width: 1;
   shape-rendering: crispEdges;
@@ -140,7 +132,7 @@
 }
 .unit-chart .unit-tip-time {
   fill: var(--ink);
-  font-weight: 500;
+  font-weight: 600;
 }
 .unit-chart .unit-tip-text {
   fill: var(--ink-2);
@@ -151,7 +143,7 @@
 }
 .unit-toggle {
   padding-inline: 8px;
-  color: var(--accent);
+  color: var(--brand);
 }
 .unit-hours .table-wrap {
   margin-top: 6px;
@@ -159,14 +151,22 @@
 .unit-row-ahead td {
   color: var(--ink-2);
 }
+.unit-swatch-soft {
+  opacity: 0.4;
+}
 
-/* scrolling tables keep their header in view */
+/* -- patients table: scrolling tables keep their header in view -------------------------- */
 .unit-scroll {
   max-height: 520px;
   overflow: auto;
-  margin-top: 10px;
+}
+.pane > .unit-scroll {
+  border-radius: 0 0 var(--r) var(--r);
+}
+.unit-hours .unit-scroll {
+  max-height: 320px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
 }
 .unit-scroll .table th {
   position: sticky;
@@ -174,8 +174,9 @@
   z-index: 1;
   background: var(--surface);
 }
-.unit-hours .unit-scroll {
-  max-height: 320px;
+.unit-scroll .table th:first-child,
+.unit-scroll .table td:first-child {
+  padding-left: 16px;
 }
 .unit-patients td:nth-child(3) {
   text-transform: capitalize;
@@ -189,7 +190,7 @@
   white-space: nowrap;
 }
 .unit-cell-sub + .unit-cell-sub,
-.mono + .unit-cell-sub {
+.num + .unit-cell-sub {
   margin-top: 2px;
 }
 .unit-patients .unit-cell-cond {
@@ -202,33 +203,14 @@
   white-space: nowrap;
 }
 .unit-scroll:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.unit-swatch-soft {
-  opacity: 0.4;
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
 }
 .unit-row-hallway td {
   background: color-mix(in srgb, var(--warn-soft) 55%, transparent);
 }
-.unit-empty {
-  margin-top: 8px;
-}
 
-/* -- panel ------------------------------------------------------------------------ */
-.unit-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.unit-stats .stat-value {
-  font-variant-numeric: normal;
-}
-.unit-meter {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 12px 0;
-  font-size: 0.75rem;
-}
+/* -- rail lists ---------------------------------------------------------------------------- */
 .unit-list {
   list-style: none;
   margin: 0;
@@ -241,10 +223,14 @@
   gap: 4px 10px;
   padding: 7px 0;
   border-bottom: 1px solid var(--line);
-  font-size: var(--step--1);
+  font-size: 13px;
+}
+.unit-list li:first-child {
+  padding-top: 0;
 }
 .unit-list li:last-child {
   border-bottom: 0;
+  padding-bottom: 0;
 }
 .unit-list-main {
   flex: 1 1 8em;
@@ -259,7 +245,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 10px;
 }
-.unit-plan .chip {
+.unit-plan .pill {
   justify-self: end;
 }
 .unit-plan-conf {
@@ -267,11 +253,12 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: 12px;
 }
 .unit-note {
   margin-top: 8px;
-  font-size: var(--step--1);
+  font-size: 12.5px;
+  color: var(--ink-3);
 }
 
 /* conditions: one stacked bar per condition, segments by acuity */
@@ -285,7 +272,7 @@
   grid-template-columns: 6.6em minmax(0, 1fr) 2.2em;
   align-items: center;
   gap: 8px;
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .unit-cond-name {
   text-transform: capitalize;
@@ -308,7 +295,7 @@
   height: 100%;
   padding: 0;
   border-radius: 0;
-  font-size: 0.6875rem;
+  font-size: 11px;
   overflow: visible;
 }
 .unit-cond-bar .unit-seg:last-child {
@@ -322,21 +309,22 @@
   margin-top: 12px;
 }
 
+.unit-quotes {
+  display: grid;
+  gap: 8px;
+}
 .unit-quote {
   margin: 0;
   padding: 2px 0 2px 10px;
-  border-left: 3px solid var(--accent);
-  font-size: var(--step--1);
+  border-left: 3px solid var(--brand);
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 p.unit-quote {
   border-left-color: var(--line);
 }
-.unit-back {
-  align-self: flex-start;
-}
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .unit-tabs {
     width: 100%;
   }

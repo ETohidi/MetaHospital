@@ -1,31 +1,18 @@
-/* Level 4: a hospital. Own hospital = bed board + plan + conversation; neighbour =
-   free-bed tiles, a free-beds chart and its latest reports. Every class starts hosp-. */
+/* Hospital level: units table, bed board, neighbour charts, the plan card and the rail
+   lists. The page anatomy it shares with every level lives in page.css. Tokens only. */
+/* =====================================================================================
+   Hospital page
+   ===================================================================================== */
 
-/* Unit series colours for the neighbour chart: blue, orange, violet (checked for
-   colour-blind separation). Dark mode steps them down so they don't glare. */
-:root {
-  --hosp-ed: var(--accent);
-  --hosp-icu: var(--tri-4);
-  --hosp-ward: color-mix(in oklch, var(--tri-1), var(--tri-5));
+/* Unit series colours for the neighbour chart: three steps of the occupancy ramp plus
+   triage orange, told apart by the legend and the direct labels. */
+.hosp-chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --hosp-ed: color-mix(in oklab, var(--accent) 88%, var(--bg));
-    --hosp-icu: color-mix(in oklab, var(--tri-4) 85%, var(--bg));
-    --hosp-ward: color-mix(in oklab, color-mix(in oklch, var(--tri-1), var(--tri-5)) 92%, var(--bg));
-  }
-}
-:root[data-theme="dark"] {
-  --hosp-ed: color-mix(in oklab, var(--accent) 88%, var(--bg));
-  --hosp-icu: color-mix(in oklab, var(--tri-4) 85%, var(--bg));
-  --hosp-ward: color-mix(in oklab, color-mix(in oklch, var(--tri-1), var(--tri-5)) 92%, var(--bg));
-}
-
 .hosp-caption {
-  font-size: var(--step--1);
-}
-.hosp-chips .chip {
-  white-space: normal;
+  font-size: 12.5px;
 }
 .hosp-icon {
   width: 14px;
@@ -37,21 +24,129 @@
   color: var(--crit);
 }
 
-/* -- bed board ------------------------------------------------------------- */
-.hosp-board-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
+/* -- units table --------------------------------------------------------------------- */
+.dept-table tbody tr[data-go] {
+  cursor: pointer;
 }
-.hosp-board-head p {
-  font-size: var(--step--1);
+.dept-table tbody tr:hover {
+  background: var(--surface-2);
+}
+.dept-name {
+  font-weight: 600;
+}
+.dept-name a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.dept-name a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.dept-name small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.dept-barcol {
+  min-width: 170px;
+}
+.beds {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.beds > span {
+  width: 62px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  text-align: right;
+  white-space: nowrap;
+}
+.bar {
+  position: relative;
+  flex: 1;
+  min-width: 70px;
+  height: 10px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 4px;
+}
+.bar > i.hatch {
+  left: auto;
+  right: 0;
+  border-radius: 0 4px 4px 0;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--line-2) 0 2px,
+    transparent 2px 5px
+  );
+}
+.bar > b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  background: var(--ink-3);
+  opacity: 0.55;
+}
+
+/* -- peers: status per capability ------------------------------------------------------- */
+.peer-table th,
+.peer-table td {
+  padding: 8px 10px;
+}
+.peer-table th:not(:first-child),
+.peer-table td:not(:first-child) {
+  width: 1%;
+}
+.peer-table th:first-child,
+.peer-table td:first-child {
+  padding-left: 16px;
+}
+.peer-name a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.peer-name a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.peer-name small {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.peer-city td {
+  background: var(--surface-2);
+}
+.peer-city-line {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.peer-city-line .prov {
+  margin-right: 4px;
+}
+
+/* -- bed board ------------------------------------------------------------------------ */
+.hosp-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 .hosp-legend {
   padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
 }
 .hosp-legend .swatch {
   border: 1px solid transparent;
@@ -101,56 +196,64 @@
 .hosp-unit {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
-.hosp-unit.is-crit {
-  border-color: color-mix(in srgb, var(--crit) 55%, var(--line));
+.hosp-legend + .hosp-unit {
+  padding-top: 0;
+  border-top: 0;
 }
 .hosp-unit-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px 12px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
 }
 .hosp-unit-head h3 {
-  font-size: var(--step-2);
+  font-size: 17px;
+  font-weight: 700;
 }
 .hosp-unit-head h3 a {
   color: var(--ink);
   text-decoration: none;
 }
 .hosp-unit-head h3 a:hover {
-  color: var(--accent);
+  color: var(--brand);
   text-decoration: underline;
 }
 .hosp-unit-long {
-  font-family: var(--font-body);
-  font-size: var(--step--1);
+  font-size: 13px;
   font-weight: 500;
   color: var(--ink-2);
 }
 .hosp-unit-counts {
-  font-size: var(--step--1);
+  font-size: 13px;
   color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
 }
 .hosp-unit-counts b {
   color: var(--ink);
 }
 .hosp-unit-open {
   flex: none;
+  margin-left: auto;
+  min-height: 28px;
+  padding-block: 2px;
 }
 .hosp-unit-facts {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  font-size: var(--step--1);
+  font-size: 12.5px;
   color: var(--ink-2);
+}
+.hosp-unit.is-crit .hosp-unit-counts b {
+  color: var(--crit);
 }
 .hosp-remembers {
   color: var(--ink);
   background: var(--warn-soft);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   padding: 0 6px;
 }
 
@@ -176,7 +279,7 @@ button.hosp-bed {
   color: inherit;
 }
 .hosp-bed.is-filled:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 .hosp-bed.is-free {
@@ -215,7 +318,7 @@ button.hosp-bed {
   border-top: 1px dashed var(--line);
 }
 .hosp-hallway-count {
-  font-size: var(--step--1);
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--crit);
 }
@@ -237,11 +340,11 @@ button.hosp-bed {
 @keyframes hosp-arrive {
   0% {
     transform: scale(1.25);
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 60%, transparent);
   }
   100% {
     transform: none;
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 0%, transparent);
   }
 }
 .hosp-detail {
@@ -250,9 +353,9 @@ button.hosp-bed {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   background: var(--surface-2);
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .hosp-detail > div {
   display: flex;
@@ -261,27 +364,7 @@ button.hosp-bed {
   gap: 4px 8px;
 }
 
-/* -- plan card -------------------------------------------------------------- */
-.hosp-plan {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-}
-.hosp-plan h4,
-.hosp-subhead {
-  font-size: 0.8125rem;
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-3);
-  margin: 0 0 4px;
-}
-.hosp-delta-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+/* -- plan decision ---------------------------------------------------------------------- */
 .hosp-delta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -289,55 +372,120 @@ button.hosp-bed {
   margin: 0;
 }
 .hosp-delta > div {
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
   padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 .hosp-delta dt {
-  font-size: 0.75rem;
-  color: var(--ink-2);
+  font-size: 11.5px;
   font-weight: 600;
+  color: var(--ink-3);
 }
 .hosp-delta dd {
   margin: 0;
-  font-size: var(--step--1);
+  font-size: 13px;
   white-space: nowrap;
+}
+.hosp-conf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.hosp-decide {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+}
+.hosp-approve {
+  width: 100%;
+  min-height: 38px;
+  font-size: 14px;
+}
+.hosp-reject {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
+}
+.hosp-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.hosp-reject .input {
+  grid-column: 1 / -1;
+}
+.hosp-reject [hidden] {
+  display: none;
+}
+.hosp-more {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.hosp-more summary {
+  cursor: pointer;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+}
+.hosp-more-body {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
+}
+.hosp-more h4,
+.hosp-subhead {
+  margin: 0 0 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.hosp-more h4 .prov {
+  margin-left: 6px;
+  vertical-align: 1px;
 }
 /* proposed actions: one compact two-line item per action, grouped by author */
 .hosp-plan-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 10px;
 }
-.hosp-plan .hosp-pa-head {
-  margin: 0 0 4px;
-}
 .hosp-pa-count {
-  font-family: var(--font-body);
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
+}
+.hosp-pa-group.is-focus .hosp-pa-list {
+  border-color: var(--brand);
 }
 .hosp-pa-list {
   list-style: none;
   margin: 0;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
+  background: var(--surface);
 }
 .hosp-pa {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 6px 8px;
-  font-size: var(--step--1);
+  font-size: 13px;
   min-width: 0;
 }
 .hosp-pa + .hosp-pa {
   border-top: 1px solid var(--line);
 }
 .hosp-pa.is-unit {
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  background: var(--surface-2);
 }
 .hosp-pa-top,
 .hosp-pa-why {
@@ -347,36 +495,26 @@ button.hosp-bed {
   gap: 2px 6px;
   min-width: 0;
 }
-.hosp-pa-who {
-  font-weight: 600;
-  color: var(--ink);
-}
-.hosp-pa-cond {
-  color: var(--ink-2);
-}
-.hosp-pa-sep {
-  color: var(--ink-3);
-}
+.hosp-pa-who,
 .hosp-pa-move {
   font-weight: 600;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
+.hosp-pa-cond,
 .hosp-pa-why {
   color: var(--ink-2);
+}
+.hosp-pa-sep,
+.hosp-pa-by {
+  color: var(--ink-3);
 }
 .hosp-pa-reason {
   flex: 1 1 100%;
   overflow-wrap: anywhere;
 }
-.hosp-pa-by {
-  color: var(--ink-3);
-}
-.hosp-conf {
-  font-size: var(--step--1);
-}
 .hosp-summary {
-  font-size: var(--step--1);
+  font-size: 13px;
   color: var(--ink-2);
 }
 .hosp-summary .actor {
@@ -386,7 +524,6 @@ button.hosp-bed {
 .hosp-blocked ul,
 .hosp-nearby ul,
 .hosp-history,
-.hosp-reports,
 .hosp-bubbles {
   list-style: none;
   margin: 0;
@@ -399,10 +536,10 @@ button.hosp-bed {
   display: flex;
   gap: 6px;
   padding: 6px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   background: var(--crit-soft);
   border-left: 3px solid var(--crit);
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .hosp-blocked .hosp-icon {
   margin-top: 2px;
@@ -410,66 +547,47 @@ button.hosp-bed {
 .hosp-rule {
   color: var(--ink-2);
 }
+.hosp-nearby .hosp-caption {
+  margin-bottom: 6px;
+  color: var(--ink-3);
+}
 .hosp-nearby li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 2px 10px;
-  font-size: var(--step--1);
-}
-.hosp-decide {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.hosp-reject {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px 8px;
-  align-items: center;
-}
-.hosp-reject .hosp-label {
-  grid-column: 1 / -1;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-.hosp-reject .input {
-  grid-column: 1;
-}
-.hosp-reject [hidden] {
-  display: none;
-}
-.hosp-reject .btn-danger {
-  grid-column: 2;
-  grid-row: 2;
+  font-size: 13px;
 }
 .hosp-history li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  font-size: var(--step--1);
+  font-size: 13px;
 }
 .hosp-history-reason {
   flex-basis: 100%;
   color: var(--ink-2);
 }
 
-/* -- team conversation --------------------------------------------------------- */
+/* -- team conversation --------------------------------------------------------------- */
 .hosp-scroll {
-  max-height: 420px;
+  max-height: 380px;
   overflow-y: auto;
-  margin-top: 8px;
-  padding-right: 4px;
+  padding: 6px 12px 10px;
   overscroll-behavior: contain;
+}
+.hosp-scroll:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
 }
 .hosp-log li {
   padding-inline: 6px;
   border-radius: 4px;
+}
+.hosp-log time {
+  font-variant-numeric: tabular-nums;
 }
 .hosp-log li > div {
   min-width: 0;
@@ -482,65 +600,34 @@ button.hosp-bed {
   box-shadow: inset 3px 0 0 var(--warn);
   background: color-mix(in srgb, var(--warn-soft) 60%, transparent);
 }
-.hosp-log-block {
-  box-shadow: inset 3px 0 0 var(--crit);
-  background: var(--crit-soft);
-}
-.hosp-log-approved {
-  box-shadow: inset 3px 0 0 var(--ok);
-  background: var(--ok-soft);
-}
+.hosp-log-block,
 .hosp-log-rejected {
   box-shadow: inset 3px 0 0 var(--crit);
   background: var(--crit-soft);
 }
-
-/* -- what families see ----------------------------------------------------------- */
-.hosp-bubbles {
-  margin-top: 8px;
+.hosp-log-approved {
+  box-shadow: inset 3px 0 0 var(--good);
+  background: var(--good-soft);
 }
+
+/* -- what families see ----------------------------------------------------------------- */
 .hosp-bubbles li {
   align-self: flex-start;
   max-width: 100%;
   padding: 8px 12px;
   border-radius: 14px 14px 14px 4px;
-  background: var(--accent-soft);
-  font-size: var(--step--1);
+  background: var(--brand-soft);
+  font-size: 13px;
 }
 .hosp-bubbles time {
   display: block;
   margin-top: 2px;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-2);
 }
 
-/* -- neighbour hospital ------------------------------------------------------------ */
-.hosp-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.hosp-tile .stat-value {
-  font-size: var(--step-3);
-  font-variant-numeric: normal;
-}
-.hosp-tile-counts {
-  font-size: var(--step--1);
-  color: var(--ink-2);
-}
-.hosp-chart-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.hosp-chart-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 6px 16px;
-}
+/* -- neighbour hospital: free-beds chart ------------------------------------------------- */
 .hosp-chart-legend b {
   color: var(--ink);
 }
@@ -548,14 +635,14 @@ button.hosp-bed {
   display: inline-block;
   width: 16px;
   height: 0;
-  border-top: 2px solid var(--hosp-ed);
+  border-top: 2px solid var(--seq-3);
   border-radius: 1px;
 }
 .hosp-key.hosp-s-ICU {
-  border-top-color: var(--hosp-icu);
+  border-top-color: var(--tri-4);
 }
 .hosp-key.hosp-s-Ward {
-  border-top-color: var(--hosp-ward);
+  border-top-color: var(--seq-5);
 }
 .hosp-chart {
   min-width: 0;
@@ -567,8 +654,8 @@ button.hosp-bed {
 }
 .hosp-chart text {
   fill: var(--ink-3);
-  font-family: var(--font-mono);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 .hosp-grid line {
   stroke: var(--line);
@@ -602,22 +689,22 @@ button.hosp-bed {
   stroke-width: 2;
 }
 .hosp-series.hosp-s-ED polyline {
-  stroke: var(--hosp-ed);
+  stroke: var(--seq-3);
 }
 .hosp-series.hosp-s-ED circle {
-  fill: var(--hosp-ed);
+  fill: var(--seq-3);
 }
 .hosp-series.hosp-s-ICU polyline {
-  stroke: var(--hosp-icu);
+  stroke: var(--tri-4);
 }
 .hosp-series.hosp-s-ICU circle {
-  fill: var(--hosp-icu);
+  fill: var(--tri-4);
 }
 .hosp-series.hosp-s-Ward polyline {
-  stroke: var(--hosp-ward);
+  stroke: var(--seq-5);
 }
 .hosp-series.hosp-s-Ward circle {
-  fill: var(--hosp-ward);
+  fill: var(--seq-5);
 }
 .hosp-table-toggle {
   align-self: flex-start;
@@ -630,38 +717,12 @@ button.hosp-bed {
 .hosp-history-table th.num {
   text-align: right;
 }
-.hosp-reports {
-  margin-top: 8px;
-}
-.hosp-reports li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-  font-size: var(--step--1);
-}
-.hosp-reports li:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-.hosp-report-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.hosp-latest {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
 
-@media (max-width: 640px) {
-  .hosp-unit-head h3 {
-    font-size: var(--step-1);
+@media (max-width: 720px) {
+  .dept-barcol {
+    min-width: 120px;
   }
-  .hosp-unit-long {
-    display: block;
+  .beds > span {
+    width: auto;
   }
 }
