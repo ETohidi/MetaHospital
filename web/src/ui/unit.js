@@ -3,7 +3,7 @@
 // rail (the plan decision, what the unit shares, what it gets), levels panel and sources.
 
 import { OWN_HOSPITAL, UNITS, UNIT_LABEL } from "../data/places.js";
-import { clock, dayClock, DAY_START } from "../engine/clock.js";
+import { DEFAULT_START_MS, makeClock } from "../engine/clock.js";
 import { ACUITY_LABEL, acuity, confBar, html, plural, raw, utilTone } from "./dom.js";
 import {
   bedBoard,
@@ -32,7 +32,11 @@ const PLAN_TONE = { approved: "ok", rejected: "crit", expired: "mute", pending: 
 const PLAN_LABEL = { approved: "Approved", rejected: "Rejected", expired: "Expired", pending: "Waiting" };
 
 // -- time formatting ---------------------------------------------------------------
-const dayOf = (tick) => Math.floor((DAY_START.hour + tick) / 24);
+// The twin's own clock (German time), taken from the snapshot at the start of every render.
+let twinClock = makeClock(DEFAULT_START_MS);
+const clock = (tick) => twinClock.time(tick);
+const dayClock = (tick) => twinClock.dayTime(tick);
+const dayOf = (tick) => twinClock.dayIndex(tick);
 
 /** Wall-clock time of a tick, with the day when it isn't today. */
 function when(tick, now) {
@@ -92,7 +96,7 @@ function timeAxis(rows, projection, width) {
   // Label every n hours (aligned to the clock) so labels stay at least ~52px apart.
   const every = [1, 2, 3, 4, 6, 12].find((n) => n * perHour >= 52) ?? 24;
   const labelled = [];
-  for (let t = t0; t <= tEnd; t++) if ((DAY_START.hour + t) % every === 0) labelled.push(t);
+  for (let t = t0; t <= tEnd; t++) if (twinClock.hour(t) % every === 0) labelled.push(t);
   return { m, t0, tNow, tEnd, x, perHour, labelled, width };
 }
 
@@ -721,6 +725,7 @@ if (typeof window !== "undefined") {
 
 export function render(container, ctx) {
   const { twin, snap, route, routes } = ctx;
+  if (snap.startMs != null && snap.startMs !== twinClock.startMs) twinClock = makeClock(snap.startMs);
   const unit = route.unit;
   const unitSnap = snap.units[unit];
   lastRerender = ctx.rerender;
@@ -743,7 +748,7 @@ export function render(container, ctx) {
         question: UNIT_ROLE[unit],
         sees: "every bed and patient in this unit; shares only counts with the hospital.",
         status: utilStatus(fraction),
-        fresh: { badge: simBadge(snap), text: `Twin time ${snap.dayTime}` },
+        fresh: { badge: simBadge(snap), text: `Twin time ${snap.dayTime}, ${snap.timeZoneLabel ?? "German time"}` },
         extra: unitTabs(snap, unit, routes),
       })}
       ${data.rows.length ? unitKpis(data, unitSnap, snap, unit) : ""}

@@ -173,7 +173,7 @@ test("default twin: 12:00 with a pending 12:00–13:00 plan after 3 replayed hou
   assert.equal(oldest.level, "info");
   assert.equal(
     oldest.text,
-    "Day started at 08:00 with 107 patients. The first 3 hours were replayed with every plan approved.",
+    "Started at 08:00 German time with 107 patients. The first 3 hours were replayed with every plan approved.",
   );
   assert.ok(t.log().every((l) => l.actor !== "Hospital" && !l.actor.endsWith(" agent")));
   checkInvariants(t, "default");
@@ -185,7 +185,7 @@ test("constructor options: no warmup and no first plan", () => {
   assert.equal(snap.time, "08:00");
   assert.equal(snap.pendingBundle, null);
   assert.equal(snap.patients.length, 107);
-  assert.deepEqual(t.log().map((l) => l.text), ["Day started at 08:00 with 107 patients."]);
+  assert.deepEqual(t.log().map((l) => l.text), ["Started at 08:00 German time with 107 patients."]);
 });
 
 test("constructor options: one warmup hour is worded in the singular", () => {
@@ -193,7 +193,7 @@ test("constructor options: one warmup hour is worded in the singular", () => {
   assert.equal(t.snapshot().time, "10:00");
   assert.equal(
     t.log().at(-1).text,
-    "Day started at 08:00 with 107 patients. The first hour was replayed with every plan approved.",
+    "Started at 08:00 German time with 107 patients. The first hour was replayed with every plan approved.",
   );
   assert.equal(t.inbox()[0].id, 1);
 });

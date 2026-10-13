@@ -31,7 +31,8 @@ export function confidenceLabel(confidence) {
  * @param {(action: object) => boolean} [isApplied]  skip actions that didn't take effect
  * @returns {string[]}
  */
-export function generateMessages(bundle, isApplied = () => true) {
+/** `time` turns a tick into "HH:00" on the twin's German clock (the default clock if left out). */
+export function generateMessages(bundle, isApplied = () => true, time = clock) {
   const messages = [];
   for (const p of bundle.proposals) {
     for (const a of p.actions) {
@@ -43,7 +44,7 @@ export function generateMessages(bundle, isApplied = () => true) {
           fromUnit: a.from ?? "",
           unit: p.unit,
           hospital: a.hospital ?? "",
-          eta: clock(a.targetTick ?? bundle.tick + 1),
+          eta: time(a.targetTick ?? bundle.tick + 1),
           beds: a.beds ?? "",
           confLabel: confidenceLabel(a.confidence ?? p.confidence),
         }),

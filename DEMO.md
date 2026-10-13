@@ -15,8 +15,9 @@ cd web && npm run serve
 ```
 
 Then open http://127.0.0.1:8080. The site opens on **Germany**, as the ministry situation desk
-sees it. The simulation always starts the same way (seed 20260926): 12:00 on a Wednesday, with
-three hours of history already replayed and a first plan waiting.
+sees it. The simulation runs on German time (Europe/Berlin): it starts at the current hour in
+Germany, with three hours of history already replayed and a first plan waiting. The seed
+(20260926) fixes what happens, so the walkthrough below plays out the same whatever the hour.
 
 ## Choreography
 
@@ -43,7 +44,7 @@ three hours of history already replayed and a first plan waiting.
    Klinikum Kreuzberg card, the twin we run.
 
 4. **The hospital director's screen.** KPIs, the units table with closed beds hatched, and on
-   the right **Requests** with the plan for 12:00–13:00: the ICU and Ward planners want to take
+   the right **Requests** with the plan for the current hour: the ICU and Ward planners want to take
    the patients waiting in the ED. Click **Approve plan**. The patients move upstairs and
    **What families see** gets one message per move. Peers appear only as status per
    capability (Available / Limited / Not available), never as exact counts.
@@ -53,7 +54,7 @@ three hours of history already replayed and a first plan waiting.
    past 100% (the extra patients wait in the hallway row), and a red "Simulated emergency" strip
    appears under the top bar.
 
-6. **Next hour.** The plan for 13:00–14:00 is big. The ED planner asks to divert ambulances, and
+6. **Next hour.** The plan for the next hour is big. The ED planner asks to divert ambulances, and
    the Safety check allows it because the ED is over 95% full. The ICU and Ward take every
    patient they have beds for, and the Regional coordinator sends three ICU patients to
    Rixdorf Hospital, the only neighbour that reported free ICU beds. Open **Actions, safety
@@ -72,7 +73,8 @@ three hours of history already replayed and a first plan waiting.
    accident shows only in the demo-twin block. Real and simulated numbers never mix.
 
 **Play** in the drawer advances the simulation by itself (1×, 2× or 4×). A plan that nobody
-decides on expires when the next hour's plan arrives. **Restart** replays the same day.
+decides on expires when the next hour's plan arrives. **Restart** starts the same day again
+from the current hour in Germany.
 
 If the ED is still above 95% at step 7 (it can happen if you deviate from the steps above),
 the keep-diverting request is correctly allowed; press **Next hour** once more to see the block.

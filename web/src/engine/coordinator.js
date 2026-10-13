@@ -2,7 +2,6 @@
 // conflicts, runs the safety check, and adds the Regional coordinator's diverts to
 // neighbour hospitals for ICU patients who can't be taken locally.
 
-import { clock, hourRange as formatHourRange } from "./clock.js";
 import * as safety from "./safety.js";
 import { OWN_HOSPITAL_NAME } from "./state.js";
 import { actionLabel } from "./labels.js";
@@ -151,7 +150,7 @@ export function expirePending(state) {
   for (const b of state.bundles) {
     if (b.status !== "pending") continue;
     b.status = "expired";
-    b.decidedTime = clock(state.tick);
+    b.decidedTime = state.clock.time(state.tick);
     state.addLog("Coordinator", "info", `${b.hourRange} plan expired without a decision`);
   }
 }
@@ -215,7 +214,7 @@ export function buildBundle(state, proposals, hospitalCapacity) {
   }
 
   const nBlocked = entries.filter((e) => e.blocked).length;
-  const hourRange = formatHourRange(state.tick);
+  const hourRange = state.clock.hourRange(state.tick);
   const summary = entries.length
     ? `${hourRange}: ${entries.length - nBlocked}/${entries.length} actions cleared by the Safety check`
     : `${hourRange}: no actions this hour`;

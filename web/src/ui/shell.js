@@ -120,12 +120,14 @@ export function createShell({ ui, routes, onAction, onToggle }) {
 
   function renderToggle(snap) {
     const day = snap.dayTime.split(" ")[0];
+    const tz = snap.timeZoneLabel ?? "German time";
     const pending = Boolean(snap.pendingBundle);
     const key = `${snap.time}|${day}|${pending}|${snap.surge ? 1 : 0}`;
     if (key === toggleKey) return;
     toggleKey = key;
     const what = pending ? "a plan is waiting" : "no plan waiting";
-    toggle.setAttribute("aria-label", `Simulation of the demo twins, ${day} ${snap.time}, ${what}`);
+    toggle.setAttribute("aria-label", `Simulation of the demo twins, ${day} ${snap.time} ${tz}, ${what}`);
+    toggle.title = `Twin time: ${tz} (Europe/Berlin)`;
     toggle.innerHTML = String(
       html`${raw(ICONS.sim)}<span class="sim-label">Simulation</span>
         <span class="sim-time"><span class="sim-day">${day.slice(0, 3)} </span>${snap.time}</span>
@@ -148,7 +150,7 @@ export function createShell({ ui, routes, onAction, onToggle }) {
       clockTime = simbar.querySelector(".clock-time");
       clockDay = simbar.querySelector(".clock-day");
     }
-    const day = snap.dayTime.split(" ")[0];
+    const day = `${snap.dayTime.split(" ")[0].slice(0, 3)} ${snap.date ?? ""} · ${snap.timeZoneLabel ?? "German time"}`.replace("  ", " ");
     if (clockTime.textContent !== snap.time) clockTime.textContent = snap.time;
     if (clockDay.textContent !== day) clockDay.textContent = day;
 
@@ -171,7 +173,7 @@ export function createShell({ ui, routes, onAction, onToggle }) {
       >
         ${raw(ICONS.alert)} Bus accident
       </button>
-      <button class="btn btn-ghost" id="btn-reset" data-sim="reset" title="Restart the day">
+      <button class="btn btn-ghost" id="btn-reset" data-sim="reset" title="Restart the simulation at the current hour in Germany">
         ${raw(ICONS.restart)} <span class="btn-label">Restart</span>
       </button>
     `);

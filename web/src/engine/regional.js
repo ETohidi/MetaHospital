@@ -2,7 +2,6 @@
 // included) says how many ICU / Ward patients it could take, conservatively.
 
 import { CONDITIONS } from "./sim.js";
-import { clock } from "./clock.js";
 
 export const VALID_FOR_TICKS = 2;
 export const CONSERVATIVE_HOLDBACK = 2; // keep this many usable beds free even when reporting capacity
@@ -31,7 +30,7 @@ export function generate(hospitalName, state) {
   return {
     hospital: hospitalName,
     canAccept,
-    validUntil: clock(state.tick + VALID_FOR_TICKS),
+    validUntil: state.clock.time(state.tick + VALID_FOR_TICKS),
     conditionsPreferred: state.rng.sample(CONDITIONS, 2),
     confidence,
     note,

@@ -31,8 +31,11 @@ coordinator, approve/reject, family messages). There is no backend and no LLM.
 ## Rules
 - Vanilla ES modules only. No bundler, no npm runtime dependencies. d3 and topojson are the
   only libraries, loaded as UMD globals from cdnjs (the claude.ai artifact CSP allows cdnjs).
-- The engine never touches the DOM, Math.random or Date: all randomness goes through the
-  Twin's seeded rng, so a seed always replays the same day.
+- The engine never touches the DOM or Math.random and never reads the current time: all
+  randomness goes through the Twin's seeded rng, so a seed always replays the same day.
+- All times are German time (Europe/Berlin, summer and winter time), whatever the visitor's
+  time zone. The twin's clock (engine/clock.js makeClock) starts at the `startMs` it is given;
+  the site passes the current hour in Germany, tests use the fixed default.
 - Views only read `twin.snapshot()` and the Twin's query methods, and change the twin only
   through `tick()`, `surge()`, `decide()` and `reset()`.
 - Build markup with the `html` tagged template from dom.js (it escapes everything); colours

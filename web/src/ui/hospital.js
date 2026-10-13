@@ -711,7 +711,7 @@ function departmentsCard(ctx) {
           </tbody>
         </table>
       </div>
-      <footer class="pane-foot"><span>Usable beds are the beds with a nurse on shift. A bed without a nurse is not capacity.</span><span>Twin time ${snap.dayTime}</span></footer>
+      <footer class="pane-foot"><span>Usable beds are the beds with a nurse on shift. A bed without a nurse is not capacity.</span><span>Twin time ${snap.dayTime}, ${snap.timeZoneLabel ?? "German time"}</span></footer>
     </section>
   `;
 }
@@ -893,7 +893,7 @@ function renderOwn(container, ctx, hosp) {
         question: "How full are we, where is it tight, and what needs my decision?",
         sees: "every bed, unit and plan in this hospital; neighbours only as status per capability.",
         status: utilStatus(t.fraction),
-        fresh: { badge: simBadge(snap), text: `Twin time ${snap.dayTime}` },
+        fresh: { badge: simBadge(snap), text: `Twin time ${snap.dayTime}, ${snap.timeZoneLabel ?? "German time"}` },
       })}
       ${ownKpis(ctx)}
       <div class="pg-grid">
@@ -951,7 +951,7 @@ function renderNeighbour(container, ctx, hosp) {
         question: `What does ${hosp.short} report to the Regional coordinator, and what can it take?`,
         sees: "the exact free beds this hospital reports each hour (authority view). Its peers see only status per capability.",
         status: utilStatus(t.fraction),
-        fresh: { badge: sim, text: `Twin time ${snap.dayTime}` },
+        fresh: { badge: sim, text: `Twin time ${snap.dayTime}, ${snap.timeZoneLabel ?? "German time"}` },
       })}
       ${kpiStrip([
         { label: "Beds in use", value: Math.round(t.fraction * 100), unit: "%", detail: `${t.occupied} patients in ${t.staffed} usable beds`, badge: sim, alert: t.fraction > 0.95 },

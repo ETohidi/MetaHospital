@@ -2,7 +2,7 @@
 // the neighbour hospitals' bed counts, plans, log, family messages and history.
 
 import { HOSPITAL_BY_NAME, HOSPITALS, OWN_HOSPITAL, UNITS } from "../data/places.js";
-import { clock, dayClock } from "./clock.js";
+import { DEFAULT_START_MS, makeClock } from "./clock.js";
 import { hashFloat } from "./rng.js";
 import * as sim from "./sim.js";
 
@@ -27,9 +27,11 @@ export const NEIGHBOUR_SPIKE_PROBABILITY = 0.02;
 export const idNumber = (id) => Number(id.slice(1));
 
 export class TwinState {
-  constructor({ seed, rng }) {
+  constructor({ seed, rng, startMs = DEFAULT_START_MS }) {
     this.seed = seed;
     this.rng = rng;
+    /** German wall clock for this twin; tick 0 is startMs. */
+    this.clock = makeClock(startMs);
     this.tick = 0;
     this.nextPatientId = 1;
     this.nextBundleId = 1;
@@ -176,11 +178,11 @@ export class TwinState {
 
   // -- log and messages --------------------------------------------------------
   time() {
-    return clock(this.tick);
+    return this.clock.time(this.tick);
   }
 
   dayTime() {
-    return dayClock(this.tick);
+    return this.clock.dayTime(this.tick);
   }
 
   addLog(actor, level, text) {
@@ -219,7 +221,7 @@ export class TwinState {
         patientId: p.id,
         acuity: p.acuity,
         condition: p.condition,
-        etaTime: clock(p.expectedDischargeTick),
+        etaTime: this.clock.time(p.expectedDischargeTick),
       }));
     const requests = this.pendingRequests.filter((r) => r.unit !== unit).slice(-5);
     const recentRejections = this.activeRejections(unit);
@@ -386,7 +388,7 @@ export class TwinState {
     for (let h = 1; h <= hours; h++) {
       const t = this.tick + h;
       projected = Math.max(0, Math.min(staffed, projected - (schedule.get(t) ?? 0) + avgInflow));
-      rows.push({ tick: t, time: clock(t), projectedInUse: Math.round(projected) });
+      rows.push({ tick: t, time: this.clock.time(t), projectedInUse: Math.round(projected) });
     }
     return rows;
   }

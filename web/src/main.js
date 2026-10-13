@@ -2,7 +2,8 @@
 // (breadcrumb + Simulation drawer) is drawn by ui/shell.js.
 // Views live in ui/*.js and each exports render(container, ctx, { routeChanged }).
 
-import { Twin } from "./engine/twin.js";
+import { DEFAULT_WARMUP_HOURS, Twin } from "./engine/twin.js";
+import { startOfHour } from "./engine/clock.js";
 import { HOSPITAL_BY_ID, OWN_HOSPITAL, UNIT_BY_ID, UNIT_IDS } from "./data/places.js";
 import { esc } from "./ui/dom.js";
 import { createShell } from "./ui/shell.js";
@@ -14,7 +15,15 @@ import * as unitView from "./ui/unit.js";
 
 const AUTOPLAY_MS = { 1: 5000, 2: 2500, 4: 1250 };
 
-const twin = new Twin();
+/**
+ * The twin's "now" is the current hour in Germany: tick 0 is set so that after the replayed
+ * warm-up hours and the first plan, the twin's clock shows this hour in German time.
+ */
+function twinStartMs() {
+  return startOfHour(Date.now()) - (DEFAULT_WARMUP_HOURS + 1) * 3_600_000;
+}
+
+const twin = new Twin({ startMs: twinStartMs() });
 /** Per-viewer UI state that survives re-renders (drafts, selections, toggles). */
 const ui = { drafts: {}, autoplay: false, speed: 1 };
 /** Real open data (World Bank, DIVI), loaded once at boot; views get it as ctx.data. */
@@ -134,8 +143,8 @@ function onSimAction(action) {
     toast(`Bus accident (simulated): 20 casualties are arriving at the ${OWN_HOSPITAL.name} Emergency Department.`);
   } else if (action === "reset") {
     ui.drafts = {};
-    twin.reset();
-    toast(`The day restarted. It is ${twin.snapshot().time} again.`);
+    twin.reset({ startMs: twinStartMs() });
+    toast(`The simulation restarted at ${twin.snapshot().time} German time.`);
   }
 }
 

@@ -3,7 +3,7 @@
 // hands out JSON-safe copies so views can't change the simulation by accident.
 
 import { UNITS } from "../data/places.js";
-import { clock, hourRange } from "./clock.js";
+import { DEFAULT_START_MS, TIME_ZONE_LABEL } from "./clock.js";
 import * as coordinator from "./coordinator.js";
 import * as family from "./family.js";
 import * as planners from "./planners.js";
@@ -13,6 +13,8 @@ import * as sim from "./sim.js";
 import { HOSPITAL_NAMES, idNumber, TwinState } from "./state.js";
 
 export const DEFAULT_SEED = 20260926;
+/** Hours replayed before the first plan; the first plan is made one hour after that. */
+export const DEFAULT_WARMUP_HOURS = 3;
 
 const copy = (x) => (x === undefined ? undefined : JSON.parse(JSON.stringify(x)));
 
@@ -28,16 +30,22 @@ export class Twin {
   #options;
   #listeners = new Set();
 
-  constructor({ seed = DEFAULT_SEED, warmupHours = 3, firstPlan = true } = {}) {
+  /**
+   * startMs is the moment of tick 0 (epoch ms, on the hour); every time label is German time.
+   * The site passes "now" so the twin's current hour is the current hour in Germany; tests
+   * keep the fixed default. The start only moves the labels: a seed replays the same day.
+   */
+  constructor({ seed = DEFAULT_SEED, warmupHours = DEFAULT_WARMUP_HOURS, firstPlan = true, startMs = DEFAULT_START_MS } = {}) {
     this.#options = { warmupHours, firstPlan };
-    this.#init(seed);
+    this.#init(seed, startMs);
   }
 
-  #init(seed) {
+  #init(seed, startMs) {
     this.seed = seed;
+    this.startMs = startMs;
     this.rng = createRng(seed);
     /** Internal; exposed for tests. Views use snapshot() and the query methods. */
-    this.state = new TwinState({ seed, rng: this.rng });
+    this.state = new TwinState({ seed, rng: this.rng, startMs });
     const { warmupHours, firstPlan } = this.#options;
     const patients = this.state.patients.size;
     this.#warmUp(warmupHours);
@@ -46,9 +54,9 @@ export class Twin {
       : "";
     this.state.log.unshift({
       tick: 0,
-      time: clock(0),
+      time: this.state.clock.time(0),
       actor: "Simulation",
-      text: `Day started at ${clock(0)} with ${patients} patients.${replayed}`,
+      text: `Started at ${this.state.clock.time(0)} ${TIME_ZONE_LABEL} with ${patients} patients.${replayed}`,
       level: "info",
     });
     if (firstPlan) this.#tick();
@@ -123,7 +131,7 @@ export class Twin {
       state.recentTransfers = applied
         .filter((x) => x.action.type === "accept_transfer")
         .map((x) => ({ from: x.action.from ?? "ED", to: x.proposal.unit, patientId: x.action.patientId }));
-      for (const message of family.generateMessages(bundle, (a) => appliedActions.has(a))) {
+      for (const message of family.generateMessages(bundle, (a) => appliedActions.has(a), (t) => state.clock.time(t))) {
         state.addFamilyMessage(message);
       }
       state.addLog("Charge nurse", "decision", `approved the ${planTime} plan`);
@@ -143,8 +151,8 @@ export class Twin {
   }
 
   /** Restart the day (same seed unless given). */
-  reset({ seed } = {}) {
-    this.#init(seed ?? this.seed);
+  reset({ seed, startMs } = {}) {
+    this.#init(seed ?? this.seed, startMs ?? this.startMs);
     this.#notify();
   }
 
@@ -169,12 +177,15 @@ export class Twin {
     );
     const patients = [...s.patients.values()]
       .sort((a, b) => idNumber(a.id) - idNumber(b.id))
-      .map((p) => ({ ...p, expectedDischargeTime: clock(p.expectedDischargeTick) }));
+      .map((p) => ({ ...p, expectedDischargeTime: s.clock.time(p.expectedDischargeTick) }));
     return copy({
       tick: s.tick,
       time: s.time(),
       dayTime: s.dayTime(),
-      hourRange: hourRange(s.tick),
+      hourRange: s.clock.hourRange(s.tick),
+      date: s.clock.date(s.tick),
+      startMs: this.startMs,
+      timeZoneLabel: TIME_ZONE_LABEL,
       seed: this.seed,
       units,
       patients,
